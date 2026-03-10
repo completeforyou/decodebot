@@ -5,9 +5,35 @@ from core.config import logger
 WAITING_FOR_KEYWORD = 1
 
 async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db = context.bot_data['db']
+    
+    # Ensure user is registered (in case they didn't use /start)
+    await db.users.add_or_update_user(user_id, update.effective_user.username)
+    
+    # Check credits
+    user_record = await db.users.get_user(user_id)
+    if not user_record:
+        await update.message.reply_text("Error loading user profile.")
+        return ConversationHandler.END
+
+    is_premium = user_record['is_premium']
+    credits_left = user_record['search_credits']
+
+    # Block if out of credits
+    if not is_premium and credits_left <= 0:
+        await update.message.reply_text(
+            "🔒 **Out of Searches!**\n\n"
+            "You have used all your free searches. Please upgrade to Premium to continue searching."
+        )
+        return ConversationHandler.END
+
+    credit_msg = f"\n*(You have {credits_left} free searches left)*" if not is_premium else "\n*(Premium active)*"
+
     await update.message.reply_text(
-        "Please enter a keyword or tag to search for (e.g., 'action' or '#action').\n\n"
-        "Or type /cancel to abort."
+        f"Please enter a keyword or tag to search for (e.g., 'action' or '#action').{credit_msg}\n\n"
+        "Or type /cancel to abort.",
+        parse_mode="Markdown"
     )
     return WAITING_FOR_KEYWORD
 
@@ -17,6 +43,8 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyword = update.message.text.strip().lower()
+    user_id = update.effective_user.id
+    
     if not keyword.startswith('#'):
         keyword = '#' + keyword
         
@@ -32,6 +60,10 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not results:
         await update.message.reply_text(f"No videos found for {keyword}.")
         return ConversationHandler.END
+    
+    user_record = await db.users.get_user(user_id)
+    if user_record and not user_record['is_premium']:
+        await db.users.use_search_credit(user_id)
         
     context.user_data['search_results'] = results
     context.user_data['search_index'] = 0

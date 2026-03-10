@@ -41,7 +41,6 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_search_callbacks, pattern="^search_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
-    logger.info("Bot is running with modular architecture...")
     app.run_polling()
 
 if __name__ == '__main__':

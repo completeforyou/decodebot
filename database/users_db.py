@@ -21,3 +21,19 @@ class UsersDB:
                 ''', user_id, username)
             except Exception as e:
                 logger.error(f"Error saving user {user_id}: {e}")
+
+async def get_user(self, user_id: int):
+        """Fetches the user's premium status and remaining credits."""
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow(
+                "SELECT is_premium, search_credits FROM users WHERE user_id = $1",
+                user_id
+            )
+
+async def use_search_credit(self, user_id: int):
+        """Deducts one search credit from a non-premium user."""
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE users SET search_credits = search_credits - 1 WHERE user_id = $1 AND search_credits > 0",
+                user_id
+            )

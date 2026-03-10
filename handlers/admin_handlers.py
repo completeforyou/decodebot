@@ -27,12 +27,18 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     tags = extract_tags(msg)
-    new_code = generate_code()
     
-    try:
-        final_code = await db.files.insert_file(new_code, msg.message_id, msg.chat.id, tags)
-    except Exception as e:
-        logger.error(f"Database insert error: {e}")
+    final_code = None
+    for attempt in range(3):
+        new_code = generate_code()
+        try:
+            final_code = await db.files.insert_file(new_code, msg.message_id, msg.chat.id, tags)
+            break # Success! Break out of the loop
+        except Exception as e:
+            logger.warning(f"Insert attempt {attempt + 1} failed (possible code collision): {e}")
+            
+    if not final_code:
+        logger.error("Failed to insert file after 3 attempts.")
         return
 
     tags_str = ", ".join(tags) if tags else "None"
@@ -41,3 +47,5 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         text=f"Stored successfully.\nCode: {final_code}\nTags detected: {tags_str}",
         reply_to_message_id=msg.message_id
     )
+    
+    
