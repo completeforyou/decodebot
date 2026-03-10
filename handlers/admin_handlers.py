@@ -3,6 +3,7 @@ import string
 from telegram import Update
 from telegram.ext import ContextTypes
 from core.config import CHANNEL_IDS, logger
+from core.security import admin_only
 
 def generate_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -47,5 +48,27 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         text=f"Stored successfully.\nCode: {final_code}\nTags detected: {tags_str}",
         reply_to_message_id=msg.message_id
     )
+@admin_only
+async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Grants premium status to a specific user ID."""
     
+    # context.args contains a list of words typed after the command
+    if not context.args:
+        await update.message.reply_text("⚠️ Usage: `/addp <user_id>`", parse_mode="Markdown")
+        return
+        
+    try:
+        # Convert the typed ID into an integer
+        target_user_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Please provide a valid numeric user ID.")
+        return
+        
+    db = context.bot_data['db']
     
+    try:
+        await db.users.make_premium(target_user_id)
+        await update.message.reply_text(f"✅ Success! User `{target_user_id}` has been upgraded to Premium.", parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Error upgrading user to premium: {e}")
+        await update.message.reply_text("❌ An error occurred. Make sure that user ID exists in the database.")  

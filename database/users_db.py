@@ -37,3 +37,12 @@ async def use_search_credit(self, user_id: int):
                 "UPDATE users SET search_credits = search_credits - 1 WHERE user_id = $1 AND search_credits > 0",
                 user_id
             )
+
+async def make_premium(self, user_id: int):
+        """Upgrades a user to premium status."""
+        async with self.pool.acquire() as conn:
+            # We use an UPDATE statement to change the boolean to TRUE
+            await conn.execute(
+                "UPDATE users SET is_premium = TRUE WHERE user_id = $1",
+                user_id
+            )
