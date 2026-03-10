@@ -1,0 +1,17 @@
+import os
+import logging
+
+# Setup basic logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Environment Variables
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Process Channel IDs
+CHANNEL_IDS_STR = os.environ.get("CHANNEL_IDS", os.environ.get("CHANNEL_ID", ""))
+CHANNEL_IDS = [int(x.strip()) for x in CHANNEL_IDS_STR.split(",") if x.strip()]
