@@ -1,7 +1,7 @@
 import random
 import string
 from telegram import Update
-from telegram.enums import MessageOriginType
+from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
 from core.config import CHANNEL_IDS, logger
 from core.security import admin_only
