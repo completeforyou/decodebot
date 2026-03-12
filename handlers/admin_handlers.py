@@ -104,3 +104,42 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     
     await msg.reply_text(reply_text, parse_mode="Markdown")
+
+@admin_only
+async def edit_tags_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Edits the tags of an existing file."""
+    # We need at least the code and one tag
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Usage: `/edittags <code> #tag1 #tag2`", parse_mode="Markdown")
+        return
+
+    code = context.args[0]
+    
+    # Extract tags and ensure they all start with a hashtag
+    raw_tags = context.args[1:]
+    tags = [tag.lower() if tag.startswith('#') else f"#{tag.lower()}" for tag in raw_tags]
+
+    db = context.bot_data['db']
+    success = await db.files.update_tags(code, tags)
+
+    if success:
+        tags_str = ", ".join(tags)
+        await update.message.reply_text(f"✅ Tags for `{code}` updated to: {tags_str}", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ File `{code}` not found. Please check the code.")
+
+@admin_only
+async def delete_file_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Deletes a file from the database."""
+    if not context.args:
+        await update.message.reply_text("⚠️ Usage: `/deletefile <code>`", parse_mode="Markdown")
+        return
+
+    code = context.args[0]
+    db = context.bot_data['db']
+    success = await db.files.delete_file(code)
+
+    if success:
+        await update.message.reply_text(f"✅ File `{code}` has been successfully deleted from the database.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ File `{code}` not found. Please check the code.")

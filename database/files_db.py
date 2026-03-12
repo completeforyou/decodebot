@@ -47,3 +47,24 @@ class FilesDB:
                 "SELECT code, tags FROM files WHERE message_id = $1 AND channel_id = $2", 
                 message_id, channel_id
             )
+        
+    async def update_tags(self, code: str, tags: list):
+        """Updates the tags for a specific file code."""
+        async with self.pool.acquire() as conn:
+            # Execute returns the command tag (e.g., 'UPDATE 1' or 'UPDATE 0')
+            result = await conn.execute(
+                "UPDATE files SET tags = $1 WHERE code = $2", 
+                tags, code
+            )
+            # Return True if a row was actually updated
+            return result == "UPDATE 1"
+
+    async def delete_file(self, code: str):
+        """Deletes a file record using its code."""
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(
+                "DELETE FROM files WHERE code = $1", 
+                code
+            )
+            # Return True if a row was actually deleted
+            return result == "DELETE 1"
