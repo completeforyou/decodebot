@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
 from database import Database
 from handlers.base_handlers import profile_command, start_command, handle_user_message
-from handlers.admin_handlers import handle_channel_post, add_premium_command
+from handlers.admin_handlers import handle_channel_post, add_premium_command, handle_admin_forward
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
     handle_search_callbacks, WAITING_FOR_KEYWORD
@@ -41,6 +41,7 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.CHANNEL, handle_channel_post))
     app.add_handler(search_conv_handler)
     app.add_handler(CallbackQueryHandler(handle_search_callbacks, pattern="^search_"))
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
     app.run_polling()

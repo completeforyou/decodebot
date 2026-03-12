@@ -1,12 +1,15 @@
 import random
 import string
 from telegram import Update
+from telegram.enums import MessageOriginType
 from telegram.ext import ContextTypes
 from core.config import CHANNEL_IDS, logger
 from core.security import admin_only
 
-def generate_code(length=6):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+def generate_code(length=10):
+    # Generates 'rad_' followed by 10 random letters (both upper and lowercase)
+    random_letters = ''.join(random.choices(string.ascii_letters, k=length))
+    return f"rad_{random_letters}"
 
 def extract_tags(message):
     tags = []
@@ -42,23 +45,17 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.error("Failed to insert file after 3 attempts.")
         return
 
-    tags_str = ", ".join(tags) if tags else "None"
-    await context.bot.send_message(
-        chat_id=msg.chat.id,
-        text=f"Stored successfully.\nCode: {final_code}\nTags detected: {tags_str}",
-        reply_to_message_id=msg.message_id
-    )
+    # The feedback message block has been removed here to prevent rate-limiting!
+
 @admin_only
 async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Grants premium status to a specific user ID."""
     
-    # context.args contains a list of words typed after the command
     if not context.args:
         await update.message.reply_text("⚠️ Usage: `/addp <user_id>`", parse_mode="Markdown")
         return
         
     try:
-        # Convert the typed ID into an integer
         target_user_id = int(context.args[0])
     except ValueError:
         await update.message.reply_text("❌ Please provide a valid numeric user ID.")
@@ -71,4 +68,39 @@ async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(f"✅ Success! User `{target_user_id}` has been upgraded to Premium.", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Error upgrading user to premium: {e}")
-        await update.message.reply_text("❌ An error occurred. Make sure that user ID exists in the database.")  
+        await update.message.reply_text("❌ An error occurred. Make sure that user ID exists in the database.")
+
+@admin_only
+async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Catches messages forwarded by admins and returns the file info."""
+    msg = update.message
+    
+    # Check if the message is forwarded specifically from a channel
+    if not msg.forward_origin or msg.forward_origin.type != MessageOriginType.CHANNEL:
+        await msg.reply_text("⚠️ Please forward a message directly from the channel.")
+        return
+        
+    original_chat_id = msg.forward_origin.chat.id
+    original_message_id = msg.forward_origin.message_id
+    
+    db = context.bot_data['db']
+    
+    # Look up the file using the original IDs
+    record = await db.files.get_file_by_origin(original_message_id, original_chat_id)
+    
+    if not record:
+        await msg.reply_text("❌ This forwarded file is not in the database. It may have been deleted or never registered.")
+        return
+        
+    tags_str = ", ".join(record['tags']) if record['tags'] else "No tags"
+    code = record['code']
+    
+    reply_text = (
+        f"📄 **File Found!**\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"**Code:** `{code}`\n"
+        f"**Tags:** {tags_str}\n\n"
+        f"*(You can now use `/edittags {code} #newtag` or `/deletefile {code}`)*"
+    )
+    
+    await msg.reply_text(reply_text, parse_mode="Markdown")

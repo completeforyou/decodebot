@@ -14,7 +14,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles private messages (users entering extraction codes)."""
-    user_text = update.message.text.strip().upper()
+    # Keep the original case for strict matching, or convert to lowercase for easy checking
+    user_text = update.message.text.strip()
+    
+    # Check if the code starts with 'rad_' (case-insensitive check)
+    if not user_text.lower().startswith('rad_'):
+        await update.message.reply_text("Please enter a correct code.")
+        return
+
     user_id = update.effective_user.id
     db = context.bot_data['db']
     
@@ -40,6 +47,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # 4. Fetch the file
     try:
+        # Pass the exact text the user typed
         record = await db.files.get_file(user_text) 
     except Exception as e:
         logger.error(f"Database query error: {e}")
@@ -62,7 +70,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             logger.error(f"Copy message error: {e}")
             await update.message.reply_text("Failed to send. The file might be deleted.")
     else:
-        await update.message.reply_text("Invalid extraction code.")
+        # Changed from "Invalid extraction code." to "File not found."
+        await update.message.reply_text("File not found.")
 
 async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Shows the user their current status and credits."""

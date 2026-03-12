@@ -39,3 +39,11 @@ class FilesDB:
                 "SELECT code, message_id, channel_id FROM files WHERE $1 = ANY(tags) LIMIT $2", 
                 tag, limit
             )
+        
+async def get_file_by_origin(self, message_id, channel_id):
+        """Looks up a file using its original channel and message ID."""
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow(
+                "SELECT code, tags FROM files WHERE message_id = $1 AND channel_id = $2", 
+                message_id, channel_id
+            )
