@@ -22,7 +22,7 @@ class UsersDB:
             except Exception as e:
                 logger.error(f"Error saving user {user_id}: {e}")
 
-async def get_user(self, user_id: int):
+    async def get_user(self, user_id: int):
         """Fetches the user's premium status and remaining credits."""
         async with self.pool.acquire() as conn:
             return await conn.fetchrow(
@@ -30,7 +30,7 @@ async def get_user(self, user_id: int):
                 user_id
             )
 
-async def use_search_credit(self, user_id: int):
+    async def use_search_credit(self, user_id: int):
         """Deducts one search credit from a non-premium user."""
         async with self.pool.acquire() as conn:
             await conn.execute(
@@ -38,7 +38,7 @@ async def use_search_credit(self, user_id: int):
                 user_id
             )
 
-async def make_premium(self, user_id: int):
+    async def make_premium(self, user_id: int):
         """Upgrades a user to premium status."""
         async with self.pool.acquire() as conn:
             # We use an UPDATE statement to change the boolean to TRUE

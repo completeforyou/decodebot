@@ -40,7 +40,7 @@ class FilesDB:
                 tag, limit
             )
         
-async def get_file_by_origin(self, message_id, channel_id):
+    async def get_file_by_origin(self, message_id, channel_id):
         """Looks up a file using its original channel and message ID."""
         async with self.pool.acquire() as conn:
             return await conn.fetchrow(
