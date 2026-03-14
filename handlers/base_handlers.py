@@ -6,11 +6,71 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db = context.bot_data['db']
     
-    # Save the user to the database
+    # 1. Look for a referral code (e.g. /start ref_123456)
+    args = context.args
+    referrer_id = None
+    if args and args[0].startswith("ref_"):
+        try:
+            referrer_id = int(args[0].split("_")[1])
+        except ValueError:
+            pass
+    
     if user:
+        # Add the user to the database
         await db.users.add_or_update_user(user.id, user.username)
         
-    await update.message.reply_text("请输入提取码以获取文件，或使用 /search 关键词 来搜索相关文件")
+        # 2. Process the referral if applicable (and ensure they aren't referring themselves)
+        if referrer_id and referrer_id != user.id:
+            success = await db.users.process_referral(user.id, referrer_id)
+            if success:
+                # Notify the person who referred them!
+                try:
+                    await context.bot.send_message(
+                        chat_id=referrer_id, 
+                        text=f"🎉 **New Referral!**\nSomeone joined using your link. You've earned **5 search credits**!",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify referrer {referrer_id}: {e}")
+
+    welcome_text = (
+        "请输入提取码以获取文件，或使用 /search 关键词 来搜索相关文件\n\n"
+        "✨ **New Features:**\n"
+        "• Use /checkin to get a daily free credit!\n"
+        "• Use /referral to invite friends and earn 5 credits!"
+    )
+    await update.message.reply_text(welcome_text)
+
+
+async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles the daily check-in."""
+    user_id = update.effective_user.id
+    db = context.bot_data['db']
+    
+    # Ensure user is registered
+    await db.users.add_or_update_user(user_id, update.effective_user.username)
+    
+    success, message = await db.users.process_checkin(user_id)
+    if success:
+        await update.message.reply_text(f"✅ {message}")
+    else:
+        await update.message.reply_text(f"⚠️ {message}")
+
+
+async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generates a referral link for the user."""
+    user_id = update.effective_user.id
+    bot_username = context.bot.username
+    
+    # Deep linking in Telegram looks like this
+    referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
+    
+    text = (
+        f"🎁 **Invite Friends & Earn Credits!**\n\n"
+        f"Share your unique referral link with friends. When they start the bot using your link for the first time, you will receive **5 free search credits**!\n\n"
+        f"🔗 Your link:\n`{referral_link}`"
+    )
+    await update.message.reply_text(text, parse_mode="Markdown")
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles private messages (users entering extraction codes)."""

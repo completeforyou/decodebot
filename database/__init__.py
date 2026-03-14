@@ -35,7 +35,9 @@ class Database:
                     username TEXT,
                     is_premium BOOLEAN DEFAULT FALSE,
                     trial_started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    search_credits INTEGER DEFAULT 5
+                    search_credits INTEGER DEFAULT 5,
+                    last_checkin DATE,
+                    referred_by BIGINT REFERENCES users(user_id)
                 )
             ''')
             # 3. Search Analytics Table

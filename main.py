@@ -1,14 +1,18 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
 from database import Database
-from handlers.base_handlers import profile_command, start_command, handle_user_message
+from handlers.base_handlers import (
+    profile_command, start_command, handle_user_message, 
+    checkin_command, referral_command
+    )
 from handlers.admin_handlers import (
     handle_channel_post, add_premium_command, handle_admin_forward, 
-    edit_tags_command, delete_file_command)
+    edit_tags_command, delete_file_command
+    )
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
     handle_search_callbacks, WAITING_FOR_KEYWORD, random_command
-)
+    )
 
 db = Database(DATABASE_URL)
 
@@ -38,6 +42,8 @@ def main():
 
     # Register Handlers
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("checkin", checkin_command))  
+    app.add_handler(CommandHandler("referral", referral_command))
     app.add_handler(CommandHandler("random", random_command))
     app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("profile", profile_command))

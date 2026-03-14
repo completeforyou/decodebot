@@ -46,3 +46,38 @@ class UsersDB:
                 "UPDATE users SET is_premium = TRUE WHERE user_id = $1",
                 user_id
             )
+
+    async def process_checkin(self, user_id: int):
+        """Handles the daily check-in logic."""
+        async with self.pool.acquire() as conn:
+            # Check if user exists first
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", user_id)
+            if not user:
+                return False, "User not found."
+            
+            # The query ensures we only update if 'last_checkin' is null or in the past
+            updated = await conn.execute('''
+                UPDATE users 
+                SET last_checkin = CURRENT_DATE, 
+                    search_credits = search_credits + 1 
+                WHERE user_id = $1 
+                  AND (last_checkin IS NULL OR last_checkin < CURRENT_DATE)
+            ''', user_id)
+            
+            if updated == "UPDATE 1":
+                return True, "Check-in successful! You earned 1 search credit."
+            else:
+                return False, "You have already checked in today! Come back tomorrow."
+
+    async def process_referral(self, new_user_id: int, referrer_id: int):
+        """Processes a referral and rewards the referrer."""
+        async with self.pool.acquire() as conn:
+            # Make sure the new user hasn't already been referred
+            user = await conn.fetchrow("SELECT referred_by FROM users WHERE user_id = $1", new_user_id)
+            if user and user['referred_by'] is None:
+                # 1. Update the new user's referred_by column
+                await conn.execute("UPDATE users SET referred_by = $1 WHERE user_id = $2", referrer_id, new_user_id)
+                # 2. Reward the referrer with 5 credits
+                await conn.execute("UPDATE users SET search_credits = search_credits + 5 WHERE user_id = $1", referrer_id)
+                return True
+            return False
