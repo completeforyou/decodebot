@@ -5,23 +5,21 @@ class FilesDB:
     def __init__(self, pool):
         self.pool = pool
 
-    async def insert_file(self, code, message_id, channel_id, tags):
+    async def insert_file(self, code, message_id, channel_id, caption):
+        """Inserts a new file, saving the entire caption."""
         async with self.pool.acquire() as conn:
-            # 1. First, cleanly check if this exact message was already saved
             existing_code = await conn.fetchval(
                 "SELECT code FROM files WHERE message_id = $1 AND channel_id = $2", 
                 message_id, channel_id
             )
             
-            # If it exists, just update the tags and return the old code
             if existing_code:
-                await conn.execute("UPDATE files SET tags = $1 WHERE code = $2", tags, existing_code)
+                await conn.execute("UPDATE files SET caption = $1 WHERE code = $2", caption, existing_code)
                 return existing_code
                 
-            # 2. If it is new, insert it. (If the code collides here, it raises an error we catch in the handler)
             await conn.execute(
-                "INSERT INTO files (code, message_id, channel_id, tags) VALUES ($1, $2, $3, $4)", 
-                code, message_id, channel_id, tags
+                "INSERT INTO files (code, message_id, channel_id, caption) VALUES ($1, $2, $3, $4)", 
+                code, message_id, channel_id, caption
             )
             return code
 
@@ -30,6 +28,16 @@ class FilesDB:
             return await conn.fetchrow(
                 "SELECT message_id, channel_id FROM files WHERE code = $1", 
                 code
+            )
+        
+    async def search_by_keyword(self, keyword, limit=50):
+        """Fuzzy search using ILIKE on the caption column."""
+        async with self.pool.acquire() as conn:
+            # Add % around the keyword for partial matching (e.g., "%action%")
+            search_pattern = f"%{keyword}%"
+            return await conn.fetch(
+                "SELECT code, message_id, channel_id FROM files WHERE caption ILIKE $1 LIMIT $2", 
+                search_pattern, limit
             )
 
     async def search_by_tag(self, tag, limit=50):
@@ -41,12 +49,20 @@ class FilesDB:
             )
         
     async def get_file_by_origin(self, message_id, channel_id):
-        """Looks up a file using its original channel and message ID."""
         async with self.pool.acquire() as conn:
             return await conn.fetchrow(
-                "SELECT code, tags FROM files WHERE message_id = $1 AND channel_id = $2", 
+                "SELECT code, caption FROM files WHERE message_id = $1 AND channel_id = $2", 
                 message_id, channel_id
             )
+    
+    async def update_caption(self, code: str, caption: str):
+        """Updates the caption for a specific file code."""
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(
+                "UPDATE files SET caption = $1 WHERE code = $2", 
+                caption, code
+            )
+            return result == "UPDATE 1"
         
     async def update_tags(self, code: str, tags: list):
         """Updates the tags for a specific file code."""
@@ -60,13 +76,11 @@ class FilesDB:
             return result == "UPDATE 1"
 
     async def delete_file(self, code: str):
-        """Deletes a file record using its code."""
         async with self.pool.acquire() as conn:
             result = await conn.execute(
                 "DELETE FROM files WHERE code = $1", 
                 code
             )
-            # Return True if a row was actually deleted
             return result == "DELETE 1"
     
     async def get_random_files(self, limit=20):

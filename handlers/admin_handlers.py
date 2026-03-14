@@ -11,15 +11,6 @@ def generate_code(length=10):
     random_letters = ''.join(random.choices(string.ascii_letters, k=length))
     return f"rad_{random_letters}"
 
-def extract_tags(message):
-    tags = []
-    if message.caption and message.caption_entities:
-        for entity in message.caption_entities:
-            if entity.type == 'hashtag':
-                tag = message.caption[entity.offset : entity.offset + entity.length]
-                tags.append(tag.lower())
-    return tags
-
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.channel_post
     db = context.bot_data['db']
@@ -30,22 +21,22 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not (msg.video or msg.photo or msg.document):
         return
 
-    tags = extract_tags(msg)
+    # Grab the full caption, or use an empty string if there is no text
+    caption = msg.caption if msg.caption else ""
     
     final_code = None
     for attempt in range(3):
         new_code = generate_code()
         try:
-            final_code = await db.files.insert_file(new_code, msg.message_id, msg.chat.id, tags)
-            break # Success! Break out of the loop
+            # We now pass 'caption' instead of 'tags'
+            final_code = await db.files.insert_file(new_code, msg.message_id, msg.chat.id, caption)
+            break 
         except Exception as e:
-            logger.warning(f"Insert attempt {attempt + 1} failed (possible code collision): {e}")
+            logger.warning(f"Insert attempt {attempt + 1} failed: {e}")
             
     if not final_code:
         logger.error("Failed to insert file after 3 attempts.")
         return
-
-    # The feedback message block has been removed here to prevent rate-limiting!
 
 @admin_only
 async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -75,7 +66,6 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     """Catches messages forwarded by admins and returns the file info."""
     msg = update.message
     
-    # Check if the message is forwarded specifically from a channel
     if not msg.forward_origin or msg.forward_origin.type != MessageOriginType.CHANNEL:
         await msg.reply_text("⚠️ Please forward a message directly from the channel.")
         return
@@ -84,23 +74,27 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     original_message_id = msg.forward_origin.message_id
     
     db = context.bot_data['db']
-    
-    # Look up the file using the original IDs
     record = await db.files.get_file_by_origin(original_message_id, original_chat_id)
     
     if not record:
-        await msg.reply_text("❌ This forwarded file is not in the database. It may have been deleted or never registered.")
+        await msg.reply_text("❌ This forwarded file is not in the database.")
         return
         
-    tags_str = ", ".join(record['tags']) if record['tags'] else "No tags"
+    # Get a preview of the caption
+    caption_text = record['caption']
+    if not caption_text:
+        caption_text = "No caption"
+    elif len(caption_text) > 100:
+        caption_text = caption_text[:100] + "..."
+        
     code = record['code']
     
     reply_text = (
         f"📄 **File Found!**\n"
         f"━━━━━━━━━━━━━━━\n"
         f"**Code:** `{code}`\n"
-        f"**Tags:** {tags_str}\n\n"
-        f"*(You can now use `/edittags {code} #newtag` or `/deletefile {code}`)*"
+        f"**Caption:** {caption_text}\n\n"
+        f"*(You can now use `/editcaption {code} <new text>` or `/deletefile {code}`)*"
     )
     
     await msg.reply_text(reply_text, parse_mode="Markdown")
@@ -125,6 +119,24 @@ async def edit_tags_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if success:
         tags_str = ", ".join(tags)
         await update.message.reply_text(f"✅ Tags for `{code}` updated to: {tags_str}", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ File `{code}` not found. Please check the code.")
+
+@admin_only
+async def edit_caption_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Edits the entire caption of an existing file."""
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Usage: `/editcaption <code> <new caption text>`", parse_mode="Markdown")
+        return
+
+    code = context.args[0]
+    new_caption = " ".join(context.args[1:]) # Joins everything after the code into a single string
+
+    db = context.bot_data['db']
+    success = await db.files.update_caption(code, new_caption)
+
+    if success:
+        await update.message.reply_text(f"✅ Caption for `{code}` has been updated!", parse_mode="Markdown")
     else:
         await update.message.reply_text(f"❌ File `{code}` not found. Please check the code.")
 

@@ -31,7 +31,7 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     credit_msg = f"\n*(You have {credits_left} free searches left)*" if not is_premium else "\n*(Premium active)*"
 
     await update.message.reply_text(
-        f"Please enter a keyword or tag to search for (e.g., 'action' or '#action').{credit_msg}\n\n"
+        f"Please enter a keyword to search for in the video captions.{credit_msg}\n\n"
         "Or type /cancel to abort.",
         parse_mode="Markdown"
     )
@@ -88,23 +88,22 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyword = update.message.text.strip().lower()
+    # Keep the raw text. We don't force it to lowercase because ILIKE in Postgres handles that automatically!
+    keyword = update.message.text.strip()
     user_id = update.effective_user.id
-    
-    if not keyword.startswith('#'):
-        keyword = '#' + keyword
         
     db = context.bot_data['db']
     
     try:
-        results = await db.files.search_by_tag(keyword)
+        # Call the new fuzzy search method
+        results = await db.files.search_by_keyword(keyword)
     except Exception as e:
         logger.error(f"Database search error: {e}")
         await update.message.reply_text("An error occurred while searching. Please try again.")
         return ConversationHandler.END
         
     if not results:
-        await update.message.reply_text(f"No videos found for {keyword}.")
+        await update.message.reply_text(f"No videos found containing '{keyword}'.")
         return ConversationHandler.END
     
     user_record = await db.users.get_user(user_id)
@@ -116,7 +115,7 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['search_keyword'] = keyword
     
     await send_search_page(update, context)
-    return ConversationHandler.END 
+    return ConversationHandler.END
 
 async def send_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE, is_callback=False):
     results = context.user_data.get('search_results', [])

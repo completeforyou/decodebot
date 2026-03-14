@@ -25,6 +25,7 @@ class Database:
                     message_id INTEGER,
                     channel_id BIGINT,
                     tags TEXT[],
+                    caption TEXT,
                     UNIQUE(message_id, channel_id)
                 )
             ''')
