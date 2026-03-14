@@ -68,3 +68,11 @@ class FilesDB:
             )
             # Return True if a row was actually deleted
             return result == "DELETE 1"
+    
+    async def get_random_files(self, limit=20):
+        """Fetches a random selection of files for the user to browse."""
+        async with self.pool.acquire() as conn:
+            return await conn.fetch(
+                "SELECT code, message_id, channel_id FROM files ORDER BY RANDOM() LIMIT $1", 
+                limit
+            )

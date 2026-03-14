@@ -60,7 +60,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             await context.bot.copy_message(
                 chat_id=update.effective_chat.id,
                 from_chat_id=record['channel_id'],
-                message_id=record['message_id']
+                message_id=record['message_id'],
+                protect_content=True
             )
             # Deduct credit ONLY after successful delivery!
             if not is_premium:

@@ -37,6 +37,52 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return WAITING_FOR_KEYWORD
 
+async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fetches random videos and uses the search pagination to display them."""
+    user_id = update.effective_user.id
+    db = context.bot_data['db']
+    
+    # Ensure user is registered
+    await db.users.add_or_update_user(user_id, update.effective_user.username)
+    
+    # Check credits
+    user_record = await db.users.get_user(user_id)
+    if not user_record:
+        await update.message.reply_text("Error loading user profile.")
+        return 
+
+    is_premium = user_record['is_premium']
+    credits_left = user_record['search_credits']
+
+    # Block if out of credits
+    if not is_premium and credits_left <= 0:
+        await update.message.reply_text(
+            "🔒 **Out of Searches!**\n\n"
+            "You have used all your free searches. Please upgrade to Premium to continue."
+        )
+        return 
+
+    try:
+        results = await db.files.get_random_files(limit=20) # Fetches 20 random videos
+    except Exception as e:
+        logger.error(f"Database random fetch error: {e}")
+        await update.message.reply_text("An error occurred. Please try again.")
+        return 
+        
+    if not results:
+        await update.message.reply_text("No videos available in the database yet.")
+        return 
+    
+    if not is_premium:
+        await db.users.use_search_credit(user_id)
+        
+    # Reuse the search state variables to magically enable your pagination!
+    context.user_data['search_results'] = results
+    context.user_data['search_index'] = 0
+    context.user_data['search_keyword'] = "🎲 Random Discovery"
+    
+    await send_search_page(update, context)
+
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Search cancelled! Send me an extraction code whenever you're ready.")
     return ConversationHandler.END
@@ -131,7 +177,8 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
             await context.bot.copy_message(
                 chat_id=update.effective_chat.id,
                 from_chat_id=record['channel_id'],
-                message_id=record['message_id']
+                message_id=record['message_id'],
+                protect_content=True
             )
         except Exception as e:
             logger.error(f"Copy message error: {e}")

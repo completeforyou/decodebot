@@ -7,7 +7,7 @@ from handlers.admin_handlers import (
     edit_tags_command, delete_file_command)
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
-    handle_search_callbacks, WAITING_FOR_KEYWORD
+    handle_search_callbacks, WAITING_FOR_KEYWORD, random_command
 )
 
 db = Database(DATABASE_URL)
@@ -38,6 +38,7 @@ def main():
 
     # Register Handlers
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("random", random_command))
     app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("profile", profile_command))
     app.add_handler(CommandHandler("edittags", edit_tags_command))
