@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from services import users as user_service
 from services import files as file_service
 from core.config import logger
+from core.security import require_subscription
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -61,6 +62,7 @@ async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
+@require_subscription
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip()
     

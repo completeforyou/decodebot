@@ -1,6 +1,7 @@
 # main.py
 import logging
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
 from database import init_db
 from handlers.base_handlers import (
@@ -20,6 +21,11 @@ async def post_init(application: Application):
     logger.info("Initializing Database schema...")
     await init_db()
     logger.info("Database ready!")
+
+async def handle_sub_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer("Please try your command again now!", show_alert=True)
+    await query.message.delete() # Cleans up the prompt
 
 def main():
     if not BOT_TOKEN or not DATABASE_URL or not CHANNEL_IDS:
@@ -57,6 +63,7 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.CHANNEL, handle_channel_post))
     app.add_handler(search_conv_handler)
     app.add_handler(CallbackQueryHandler(handle_search_callbacks, pattern="^search_"))
+    app.add_handler(CallbackQueryHandler(handle_sub_check, pattern="^check_sub$"))
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 

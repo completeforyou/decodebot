@@ -25,3 +25,6 @@ CHANNEL_IDS = [int(x.strip()) for x in CHANNEL_IDS_STR.split(",") if x.strip()]
 
 ADMIN_IDS_STR = os.environ.get("ADMIN_IDS", "")
 ADMIN_IDS = [int(x.strip()) for x in ADMIN_IDS_STR.split(",") if x.strip()]
+
+FORCE_JOIN_STR = os.environ.get("FORCE_JOIN_CHANNELS", "")
+FORCE_JOIN_CHANNELS = [x.strip() for x in FORCE_JOIN_STR.split(",") if x.strip()]

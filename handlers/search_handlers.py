@@ -3,9 +3,11 @@ from telegram.ext import ContextTypes, ConversationHandler
 from core.config import logger
 from services import users as user_service
 from services import files as file_service
+from core.security import require_subscription
 
 WAITING_FOR_KEYWORD = 1
 
+@require_subscription
 async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     await user_service.add_or_update_user(user_id, update.effective_user.username)
