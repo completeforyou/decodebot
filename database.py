@@ -1,5 +1,6 @@
 # database.py
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy import text
 from core.config import DATABASE_URL
 from models.base import Base
 
@@ -24,6 +25,6 @@ async def init_db():
     """Creates all tables and indexes if they don't exist."""
     async with engine.begin() as conn:
         # Create extension for fast text search
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
