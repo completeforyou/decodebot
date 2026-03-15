@@ -1,3 +1,4 @@
+# handlers/admin_handlers.py
 import random
 import string
 from telegram import Update
@@ -5,6 +6,8 @@ from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
 from core.config import CHANNEL_IDS, logger
 from core.security import admin_only
+from services import users as user_service
+from services import files as file_service
 
 def generate_code(length=10):
     # Generates 'rad_' followed by 10 random letters (both upper and lowercase)
@@ -13,7 +16,6 @@ def generate_code(length=10):
 
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.channel_post
-    db = context.bot_data['db']
     
     if not msg or msg.chat.id not in CHANNEL_IDS:
         return
@@ -28,8 +30,8 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
     for attempt in range(3):
         new_code = generate_code()
         try:
-            # We now pass 'caption' instead of 'tags'
-            final_code = await db.files.insert_file(new_code, msg.message_id, msg.chat.id, caption)
+            # Using the new file_service
+            final_code = await file_service.insert_file(new_code, msg.message_id, msg.chat.id, caption)
             break 
         except Exception as e:
             logger.warning(f"Insert attempt {attempt + 1} failed: {e}")
@@ -52,14 +54,16 @@ async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Please provide a valid numeric user ID.")
         return
         
-    db = context.bot_data['db']
-    
     try:
-        await db.users.make_premium(target_user_id)
-        await update.message.reply_text(f"✅ Success! User `{target_user_id}` has been upgraded to Premium.", parse_mode="Markdown")
+        # Using the new user_service
+        success = await user_service.make_premium(target_user_id)
+        if success:
+            await update.message.reply_text(f"✅ Success! User `{target_user_id}` has been upgraded to Premium.", parse_mode="Markdown")
+        else:
+            await update.message.reply_text("❌ User not found. They need to start the bot first.")
     except Exception as e:
         logger.error(f"Error upgrading user to premium: {e}")
-        await update.message.reply_text("❌ An error occurred. Make sure that user ID exists in the database.")
+        await update.message.reply_text("❌ An error occurred while upgrading the user.")
 
 @admin_only
 async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,21 +77,21 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     original_chat_id = msg.forward_origin.chat.id
     original_message_id = msg.forward_origin.message_id
     
-    db = context.bot_data['db']
-    record = await db.files.get_file_by_origin(original_message_id, original_chat_id)
+    # Using the new file_service
+    record = await file_service.get_file_by_origin(original_message_id, original_chat_id)
     
     if not record:
         await msg.reply_text("❌ This forwarded file is not in the database.")
         return
         
-    # Get a preview of the caption
-    caption_text = record['caption']
+    # Using attribute access (record.caption) instead of dict access (record['caption'])
+    caption_text = record.caption
     if not caption_text:
         caption_text = "No caption"
     elif len(caption_text) > 100:
         caption_text = caption_text[:100] + "..."
         
-    code = record['code']
+    code = record.code
     
     reply_text = (
         f"📄 **File Found!**\n"
@@ -102,19 +106,17 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
 @admin_only
 async def edit_tags_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Edits the tags of an existing file."""
-    # We need at least the code and one tag
     if len(context.args) < 2:
         await update.message.reply_text("⚠️ Usage: `/edittags <code> #tag1 #tag2`", parse_mode="Markdown")
         return
 
     code = context.args[0]
     
-    # Extract tags and ensure they all start with a hashtag
     raw_tags = context.args[1:]
     tags = [tag.lower() if tag.startswith('#') else f"#{tag.lower()}" for tag in raw_tags]
 
-    db = context.bot_data['db']
-    success = await db.files.update_tags(code, tags)
+    # Using the new file_service
+    success = await file_service.update_tags(code, tags)
 
     if success:
         tags_str = ", ".join(tags)
@@ -130,10 +132,10 @@ async def edit_caption_command(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     code = context.args[0]
-    new_caption = " ".join(context.args[1:]) # Joins everything after the code into a single string
+    new_caption = " ".join(context.args[1:])
 
-    db = context.bot_data['db']
-    success = await db.files.update_caption(code, new_caption)
+    # Using the new file_service
+    success = await file_service.update_caption(code, new_caption)
 
     if success:
         await update.message.reply_text(f"✅ Caption for `{code}` has been updated!", parse_mode="Markdown")
@@ -148,8 +150,9 @@ async def delete_file_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     code = context.args[0]
-    db = context.bot_data['db']
-    success = await db.files.delete_file(code)
+    
+    # Using the new file_service
+    success = await file_service.delete_file(code)
 
     if success:
         await update.message.reply_text(f"✅ File `{code}` has been successfully deleted from the database.", parse_mode="Markdown")
