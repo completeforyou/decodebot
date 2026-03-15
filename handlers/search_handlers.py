@@ -1,18 +1,16 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from core.config import logger
+from services import users as user_service
+from services import files as file_service
 
 WAITING_FOR_KEYWORD = 1
 
 async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    db = context.bot_data['db']
+    await user_service.add_or_update_user(user_id, update.effective_user.username)
+    user_record = await user_service.get_user(user_id)
     
-    # Ensure user is registered (in case they didn't use /start)
-    await db.users.add_or_update_user(user_id, update.effective_user.username)
-    
-    # Check credits
-    user_record = await db.users.get_user(user_id)
     if not user_record:
         await update.message.reply_text("Error loading user profile.")
         return ConversationHandler.END
@@ -96,7 +94,7 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # Call the new fuzzy search method
-        results = await db.files.search_by_keyword(keyword)
+        results = await file_service.search_by_keyword(keyword)
     except Exception as e:
         logger.error(f"Database search error: {e}")
         await update.message.reply_text("An error occurred while searching. Please try again.")
@@ -106,11 +104,16 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"No videos found containing '{keyword}'.")
         return ConversationHandler.END
     
-    user_record = await db.users.get_user(user_id)
+    user_record = await user_service.get_user(user_id)
     if user_record and not user_record['is_premium']:
-        await db.users.use_search_credit(user_id)
+        await user_service.use_search_credit(user_id)
+
+    lightweight_results = [
+        {'code': r.code, 'channel_id': r.channel_id, 'message_id': r.message_id} 
+        for r in results
+    ]
         
-    context.user_data['search_results'] = results
+    context.user_data['search_results'] = lightweight_results
     context.user_data['search_index'] = 0
     context.user_data['search_keyword'] = keyword
     

@@ -24,3 +24,53 @@ async def get_random_files(limit: int = 20):
             select(File).order_by(func.random()).limit(limit)
         )
         return result.scalars().all()
+    
+async def insert_file(code: str, message_id: int, channel_id: int, caption: str) -> str:
+    async with AsyncSessionLocal() as session:
+        new_file = File(
+            code=code, 
+            message_id=message_id, 
+            channel_id=channel_id, 
+            caption=caption,
+            tags=[]
+        )
+        session.add(new_file)
+        await session.commit()
+        return code
+
+async def get_file_by_origin(message_id: int, channel_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(File).filter_by(message_id=message_id, channel_id=channel_id)
+        )
+        return result.scalars().first()
+
+async def update_tags(code: str, tags: list) -> bool:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(File).filter_by(code=code))
+        file_record = result.scalars().first()
+        if file_record:
+            file_record.tags = tags
+            await session.commit()
+            return True
+        return False
+
+async def update_caption(code: str, new_caption: str) -> bool:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(File).filter_by(code=code))
+        file_record = result.scalars().first()
+        if file_record:
+            file_record.caption = new_caption
+            await session.commit()
+            return True
+        return False
+
+async def delete_file(code: str) -> bool:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(File).filter_by(code=code))
+        file_record = result.scalars().first()
+        if file_record:
+            await session.delete(file_record)
+            await session.commit()
+            return True
+        return False

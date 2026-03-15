@@ -1,4 +1,5 @@
 # services/users.py
+from collections import OrderedDict
 from sqlalchemy import select, update
 from database import AsyncSessionLocal
 from models.user import User
@@ -6,13 +7,13 @@ from datetime import date
 from core.config import logger
 
 # Optimization: LRU-style cache to prevent hitting the DB for every message
-_known_users_cache = {}
+_known_users_cache = OrderedDict()
 MAX_KNOWN_USERS = 1000
 
 async def add_or_update_user(user_id: int, username: str) -> bool:
-    """Checks cache first, then DB. Returns True if user is newly created."""
     if user_id in _known_users_cache:
-        return False # Already exists
+        _known_users_cache.move_to_end(user_id) # Mark as recently used
+        return False
 
     async with AsyncSessionLocal() as session:
         try:
@@ -23,14 +24,35 @@ async def add_or_update_user(user_id: int, username: str) -> bool:
                 user = User(user_id=user_id, username=username)
                 session.add(user)
                 await session.commit()
-                _known_users_cache[user_id] = True
+                _update_cache(user_id)
                 return True
                 
-            _known_users_cache[user_id] = True
+            _update_cache(user_id)
             return False
         except Exception as e:
             await session.rollback()
             logger.error(f"Error adding user {user_id}: {e}")
+            return False
+        
+def _update_cache(user_id: int):
+    """Helper to maintain the cache size."""
+    _known_users_cache[user_id] = True
+    if len(_known_users_cache) > MAX_KNOWN_USERS:
+        _known_users_cache.popitem(last=False)
+
+async def make_premium(user_id: int) -> bool:
+    """Missing function: Upgrades a user to premium."""
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(select(User).filter_by(user_id=user_id))
+            user = result.scalars().first()
+            if user:
+                user.is_premium = True
+                await session.commit()
+                return True
+            return False
+        except Exception as e:
+            await session.rollback()
             return False
 
 async def get_user(user_id: int):
