@@ -1,36 +1,32 @@
+# main.py
+import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
-from database import Database
+from database import init_db
 from handlers.base_handlers import (
     profile_command, start_command, handle_user_message, 
     checkin_command, referral_command,
-    )
+)
 from handlers.admin_handlers import (
     handle_channel_post, add_premium_command, handle_admin_forward, 
     edit_tags_command, delete_file_command, edit_caption_command
-    )
+)
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
     handle_search_callbacks, WAITING_FOR_KEYWORD, random_command
-    )
-
-db = Database(DATABASE_URL)
+)
 
 async def post_init(application: Application):
-    logger.info("Connecting to Database...")
-    await db.connect()
-    application.bot_data['db'] = db
-
-async def post_stop(application: Application):
-    logger.info("Closing Database...")
-    await db.close()
+    logger.info("Initializing Database schema...")
+    await init_db()
+    logger.info("Database ready!")
 
 def main():
     if not BOT_TOKEN or not DATABASE_URL or not CHANNEL_IDS:
         logger.error("CRITICAL ERROR: Missing environment variables.")
         return
 
-    app = Application.builder().token(BOT_TOKEN).post_init(post_init).post_stop(post_stop).build()
+    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
     search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("search", search_command)],
@@ -56,6 +52,7 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
+    logger.info("Bot started via polling...")
     app.run_polling()
 
 if __name__ == '__main__':
