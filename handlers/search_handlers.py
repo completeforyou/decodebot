@@ -17,8 +17,8 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Error loading user profile.")
         return ConversationHandler.END
 
-    is_premium = user_record['is_premium']
-    credits_left = user_record['search_credits']
+    is_premium = user_record.is_premium
+    credits_left = user_record.search_credits
 
     # Block if out of credits
     if not is_premium and credits_left <= 0:
@@ -51,8 +51,8 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Error loading user profile.")
         return 
 
-    is_premium = user_record['is_premium']
-    credits_left = user_record['search_credits']
+    is_premium = user_record.is_premium
+    credits_left = user_record.search_credits
 
     # Block if out of credits
     if not is_premium and credits_left <= 0:
@@ -107,7 +107,7 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     user_record = await user_service.get_user(user_id)
-    if user_record and not user_record['is_premium']:
+    if user_record and not user_record.is_premium:
         await user_service.use_search_credit(user_id)
 
     lightweight_results = [
