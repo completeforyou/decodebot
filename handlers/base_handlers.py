@@ -16,14 +16,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
     
     if user:
-        # Add the user to the database
-        await db.users.add_or_update_user(user.id, user.username)
+        # Check if the user is completely new
+        is_new_user = await db.users.add_or_update_user(user.id, user.username)
         
-        # 2. Process the referral if applicable (and ensure they aren't referring themselves)
-        if referrer_id and referrer_id != user.id:
+        # ONLY process referral if they are a brand new user
+        if is_new_user and referrer_id and referrer_id != user.id:
             success = await db.users.process_referral(user.id, referrer_id)
             if success:
-                # Notify the person who referred them!
                 try:
                     await context.bot.send_message(
                         chat_id=referrer_id, 
@@ -125,7 +124,11 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
             # Deduct credit ONLY after successful delivery!
             if not is_premium:
-                await db.users.use_search_credit(user_id)
+                success = await db.users.use_search_credit(user_id)
+                if not success:
+                    # Catch the edge case where they somehow ran out of credits during the process
+                    await update.message.reply_text("Failed to deduct credit. You might be out of credits.")
+                    return
                 
         except Exception as e:
             logger.error(f"Copy message error: {e}")

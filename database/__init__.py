@@ -29,6 +29,13 @@ class Database:
                     UNIQUE(message_id, channel_id)
                 )
             ''')
+
+            #Create extension and index for fast text search ---
+            await conn.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm;')
+            await conn.execute('''
+                CREATE INDEX IF NOT EXISTS files_caption_trgm_idx 
+                ON files USING GIN (caption gin_trgm_ops);
+            ''')
             # 2. Users Table
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS users (
