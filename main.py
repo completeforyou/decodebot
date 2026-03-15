@@ -26,7 +26,15 @@ def main():
         logger.error("CRITICAL ERROR: Missing environment variables.")
         return
 
-    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    app = (
+    Application.builder()
+    .token(BOT_TOKEN)
+    .post_init(post_init)
+    .connect_timeout(30.0)  # Gives the server 30 seconds to connect
+    .read_timeout(30.0)     # Gives the server 30 seconds to read the response
+    .get_updates_read_timeout(42.0) # Helps stabilize polling
+    .build()
+)
 
     search_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("search", search_command)],
