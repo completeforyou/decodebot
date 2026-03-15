@@ -12,8 +12,8 @@ from models.file import File
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=5,
-    max_overflow=5,
+    pool_size=2,
+    max_overflow=3,
     pool_pre_ping=True, # Automatically reconnect if DB connection drops
     pool_recycle=3600
 )
