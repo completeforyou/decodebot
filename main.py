@@ -11,7 +11,8 @@ from handlers.base_handlers import (
 from handlers.admin_handlers import (
     handle_channel_post, add_premium_command, handle_admin_forward, 
     edit_tags_command, delete_file_command, edit_caption_command,
-    list_channels_command, add_channel_command, remove_channel_command, toggle_command
+    list_channels_command, add_channel_command, remove_channel_command, 
+    toggle_command, broadcast_command,
 )
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
@@ -57,6 +58,7 @@ def main():
     #admin handlers
     app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("edittags", edit_tags_command))
+    app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CommandHandler("editcaption", edit_caption_command))
     app.add_handler(CommandHandler("deletefile", delete_file_command))
     app.add_handler(CommandHandler("channels", list_channels_command))

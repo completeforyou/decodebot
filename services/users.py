@@ -148,3 +148,10 @@ async def deactivate_user(user_id: int):
         except Exception as e:
             await session.rollback()
             logger.error(f"Error deactivating user {user_id}: {e}")
+
+async def get_all_active_users():
+    """Fetches all users who are currently marked as active."""
+    async with AsyncSessionLocal() as session:
+        # We only want to message users who haven't blocked the bot
+        result = await session.execute(select(User).filter_by(is_active=True))
+        return result.scalars().all()

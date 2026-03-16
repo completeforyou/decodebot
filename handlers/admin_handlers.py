@@ -1,6 +1,7 @@
 # handlers/admin_handlers.py
 import random
 import string
+import asyncio
 from telegram import Update
 from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
@@ -242,3 +243,77 @@ async def remove_channel_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(f"✅ Successfully removed `{channel_id}` from approved channels.", parse_mode="Markdown")
     else:
         await update.message.reply_text("⚠️ Channel not found in the database.")
+
+import asyncio
+# (Make sure to keep your other imports at the top)
+
+@admin_only
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Broadcasts a message (text, image, or video) to all active users."""
+    
+    # 1. Check if the admin is replying to a message they want to broadcast
+    reply_to_message = update.message.reply_to_message
+    
+    # 2. If not replying, check if they typed text after /broadcast
+    broadcast_text = " ".join(context.args) if context.args else None
+    
+    # 3. If they did neither, tell them how to use it
+    if not reply_to_message and not broadcast_text:
+        help_text = (
+            "⚠️ **How to use Broadcast:**\n\n"
+            "**Option 1 (Text only):**\n"
+            "Type `/broadcast Your message here`\n\n"
+            "**Option 2 (Images, Videos, Files):**\n"
+            "Send the image/video to the bot first. Then, **reply** to that image with the command `/broadcast`."
+        )
+        await update.message.reply_text(help_text, parse_mode="Markdown")
+        return
+
+    # Fetch all our saved users
+    users = await user_service.get_all_active_users()
+    
+    if not users:
+        await update.message.reply_text("❌ No active users found in the database.")
+        return
+
+    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users. This might take a moment...")
+    
+    success_count = 0
+    fail_count = 0
+    
+    # Loop through every user and send the message
+    for user in users:
+        try:
+            if reply_to_message:
+                # OPTION 2: If they replied to an image/video, perfectly copy it to the user!
+                await context.bot.copy_message(
+                    chat_id=user.user_id,
+                    from_chat_id=reply_to_message.chat.id,
+                    message_id=reply_to_message.message_id
+                )
+            else:
+                # OPTION 1: Otherwise, just send the text they typed
+                await context.bot.send_message(
+                    chat_id=user.user_id, 
+                    text=broadcast_text,
+                    parse_mode="Markdown"
+                )
+                
+            success_count += 1
+            
+            # VERY IMPORTANT: Pause for 0.05 seconds to avoid Telegram rate limits
+            await asyncio.sleep(0.05) 
+            
+        except Exception as e:
+            fail_count += 1
+            # Optionally deactivate them if they blocked the bot
+            await user_service.deactivate_user(user.user_id)
+            
+    # Send a final report to the admin
+    report = (
+        f"✅ **Broadcast Complete!**\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📨 Successfully delivered: {success_count}\n"
+        f"❌ Failed (Blocked bot): {fail_count}"
+    )
+    await update.message.reply_text(report, parse_mode="Markdown")
