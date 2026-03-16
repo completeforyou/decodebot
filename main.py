@@ -1,6 +1,5 @@
 # main.py
 import logging
-import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
@@ -65,21 +64,8 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
-
-    PORT = int(os.environ.get('PORT', 8080))
-    WEBHOOK_URL = "https://decodebot-production.up.railway.app"
-
-    if WEBHOOK_URL:
-        logger.info(f"Starting bot via Webhook on port {PORT}...")
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        )
-    else:
-        logger.info("Bot started via polling...")
-        app.run_polling()
-
+    logger.info("Bot started via polling...")
+    app.run_polling()
+    
 if __name__ == '__main__':
     main()
