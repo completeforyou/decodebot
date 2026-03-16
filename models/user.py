@@ -13,3 +13,4 @@ class User(Base):
     search_credits = Column(Integer, default=5)
     last_checkin = Column(Date, nullable=True)
     referred_by = Column(BigInteger, ForeignKey('users.user_id'), nullable=True)
+    is_active = Column(Boolean, default=True)

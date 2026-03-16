@@ -1,4 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Forbidden
 from telegram.ext import ContextTypes, ConversationHandler
 from core.config import logger
 from services import users as user_service
@@ -184,6 +185,7 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
             await query.message.reply_text("Session expired. Please start a new /search.")
             return
         record = results[index]
+        user_id = update.effective_user.id
         try:
             await context.bot.copy_message(
                 chat_id=update.effective_chat.id,
@@ -191,6 +193,12 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
                 message_id=record['message_id'],
                 protect_content=True
             )
+
+        except Forbidden:
+            # Specifically catch the block error
+            logger.warning(f"User {user_id} blocked the bot. Marking as inactive.")
+            await user_service.deactivate_user(user_id)
+            await query.answer("Delivery failed: Please unblock the bot.", show_alert=True)
         except Exception as e:
             logger.error(f"Copy message error: {e}")
             await query.message.reply_text("Failed to send. The file might be deleted.")

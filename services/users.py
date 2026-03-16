@@ -134,3 +134,17 @@ async def process_referral(new_user_id: int, referrer_id: int) -> bool:
             await session.rollback()
             logger.error(f"Error processing referral: {e}")
             return False
+        
+async def deactivate_user(user_id: int):
+    """Marks a user as inactive (e.g., if they blocked the bot)."""
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(select(User).filter_by(user_id=user_id))
+            user = result.scalars().first()
+            if user:
+                user.is_active = False
+                await session.commit()
+                logger.info(f"User {user_id} has been deactivated.")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Error deactivating user {user_id}: {e}")

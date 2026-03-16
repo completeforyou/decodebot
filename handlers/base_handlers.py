@@ -1,6 +1,7 @@
 # handlers/base_handlers.py
 from telegram import Update
 from telegram.ext import ContextTypes
+from telegram.error import Forbidden
 from services import users as user_service
 from services import files as file_service
 from core.config import logger
@@ -105,7 +106,10 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if not success:
                     await update.message.reply_text("Failed to deduct credit. You might be out of credits.")
                     return
-                
+        except Forbidden:
+            # Specifically catch the block error
+            logger.warning(f"User {user_id} blocked the bot. Marking as inactive.")
+            await user_service.deactivate_user(user_id)        
         except Exception as e:
             logger.error(f"Copy message error: {e}")
             await update.message.reply_text("Failed to send. The file might be deleted.")
