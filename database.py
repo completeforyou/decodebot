@@ -7,6 +7,7 @@ from models.base import Base
 # Import models to register them with Base
 from models.user import User
 from models.file import File
+from models.feature import Feature
 
 # Configure the Async Engine with connection pooling best practices
 engine = create_async_engine(

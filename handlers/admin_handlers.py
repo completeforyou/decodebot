@@ -8,6 +8,7 @@ from core.config import CHANNEL_IDS, logger
 from core.security import admin_only
 from services import users as user_service
 from services import files as file_service
+from services import features as feature_service
 
 def generate_code(length=10):
     # Generates 'rad_' followed by 10 random letters (both upper and lowercase)
@@ -158,3 +159,24 @@ async def delete_file_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(f"✅ File `{code}` has been successfully deleted from the database.", parse_mode="Markdown")
     else:
         await update.message.reply_text(f"❌ File `{code}` not found. Please check the code.")
+
+@admin_only
+async def toggle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to toggle features on or off."""
+    if not context.args:
+        await update.message.reply_text(
+            "⚠️ Usage: `/toggle <feature_name>`\n"
+            "Example: `/toggle search` or `/toggle checkin`", 
+            parse_mode="Markdown"
+        )
+        return
+
+    # Grab the feature name from the command arguments and make it lowercase
+    feature_name = context.args[0].lower()
+    
+    # Flip the switch!
+    new_status = await feature_service.toggle_feature(feature_name)
+
+    # Tell the admin the result
+    status_text = "✅ ENABLED" if new_status else "❌ DISABLED"
+    await update.message.reply_text(f"Feature `{feature_name}` is now **{status_text}**.", parse_mode="Markdown")

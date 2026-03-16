@@ -4,6 +4,7 @@ from functools import wraps
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from core.config import ADMIN_IDS, logger, FORCE_JOIN_CHANNELS
+from services import features as feature_service
 
 def admin_only(func):
     """Decorator to restrict commands to admins only."""
@@ -69,3 +70,27 @@ def require_subscription(func):
         # If they are in all channels, proceed to the actual handler
         return await func(update, context, *args, **kwargs)
     return wrapper
+
+def require_feature(feature_name: str):
+    """Decorator to check if a specific feature switch is turned on."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+            # Check the status of the feature
+            is_active = await feature_service.get_feature_status(feature_name)
+            
+            if not is_active:
+                # If disabled, politely inform the user and stop execution
+                message_text = f"🚧 **Maintenance Mode**\n\nThe `{feature_name}` feature is currently disabled by administrators. Please try again later."
+                
+                if update.callback_query:
+                    await update.callback_query.answer(f"The {feature_name} feature is currently disabled.", show_alert=True)
+                elif update.message:
+                    await update.message.reply_text(message_text, parse_mode="Markdown")
+                    
+                return # Block the execution of the command
+                
+            # If enabled, proceed normally
+            return await func(update, context, *args, **kwargs)
+        return wrapper
+    return decorator
