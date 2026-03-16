@@ -4,7 +4,7 @@ import string
 from telegram import Update
 from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
-from core.config import CHANNEL_IDS, logger
+from core.config import logger
 from core.security import admin_only
 from services import users as user_service
 from services import files as file_service
