@@ -285,12 +285,20 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for user in users:
         try:
             if reply_to_message:
-                # OPTION 2: If they replied to an image/video, perfectly copy it to the user!
-                await context.bot.copy_message(
-                    chat_id=user.user_id,
-                    from_chat_id=reply_to_message.chat.id,
-                    message_id=reply_to_message.message_id
-                )
+                # Setup the base copy command
+                copy_kwargs = {
+                    "chat_id": user.user_id,
+                    "from_chat_id": reply_to_message.chat.id,
+                    "message_id": reply_to_message.message_id
+                }
+                
+                # If you typed a message after /broadcast, force it to be the new caption!
+                if broadcast_text:
+                    copy_kwargs["caption"] = broadcast_text
+                    copy_kwargs["parse_mode"] = "Markdown"
+                    
+                await context.bot.copy_message(**copy_kwargs)
+                
             else:
                 # OPTION 1: Otherwise, just send the text they typed
                 await context.bot.send_message(
