@@ -2,7 +2,7 @@
 import random
 import string
 import asyncio
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
 from core.config import logger
@@ -249,75 +249,111 @@ import asyncio
 
 @admin_only
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Broadcasts a message (text, image, or video) to all active users."""
+    """Broadcasts a message (with optional inline buttons) to all active users."""
     
-    # 1. Check if the admin is replying to a message they want to broadcast
     reply_to_message = update.message.reply_to_message
+    raw_text = " ".join(context.args) if context.args else None
     
-    # 2. If not replying, check if they typed text after /broadcast
-    broadcast_text = " ".join(context.args) if context.args else None
-    
-    # 3. If they did neither, tell them how to use it
-    if not reply_to_message and not broadcast_text:
+    if not reply_to_message and not raw_text:
         help_text = (
             "⚠️ **How to use Broadcast:**\n\n"
-            "**Option 1 (Text only):**\n"
-            "Type `/broadcast Your message here`\n\n"
-            "**Option 2 (Images, Videos, Files):**\n"
-            "Send the image/video to the bot first. Then, **reply** to that image with the command `/broadcast`."
+            "**Standard:** `/broadcast Your message`\n"
+            "**With Button:** `/broadcast Your message || Button Name | https://link.com`\n\n"
+            "*(You can also reply to an image/video with these commands!)*"
         )
         await update.message.reply_text(help_text, parse_mode="Markdown")
         return
 
-    # Fetch all our saved users
+    # --- BUTTON PARSING LOGIC ---
+    broadcast_text = raw_text
+    reply_markup = None
+    
+    # Check if the admin used our special "||" separator to add a button
+    if raw_text and "||" in raw_text:
+        parts = raw_text.split("||")
+        broadcast_text = parts[0].strip() # The actual message text
+        
+        button_data = parts[1].split("|")
+        if len(button_data) >= 2:
+            btn_text = button_data[0].strip()
+            btn_url = button_data[1].strip()
+            
+            # Default to no style (App's default theme)
+            btn_style = None 
+            
+            # Check if a 3rd parameter (color) was provided
+            if len(button_data) >= 3:
+                color_request = button_data[2].strip().lower()
+                
+                # The official Telegram Bot API 9.4 color styles!
+                if color_request in ["red", "danger"]:
+                    btn_style = "danger"
+                elif color_request in ["green", "success"]:
+                    btn_style = "success"
+                elif color_request in ["blue", "primary"]:
+                    btn_style = "primary"
+
+            if btn_url.startswith("http"):
+                # Inject the style safely straight into the Telegram API payload
+                kwargs = {}
+                if btn_style:
+                    kwargs = {"style": btn_style}
+                    
+                reply_markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(text=btn_text, url=btn_url, api_kwargs=kwargs)]
+                ])
+            else:
+                await update.message.reply_text("❌ Error: The button URL must start with 'http' or 'https'.")
+                return
+    # -----------------------------
+
     users = await user_service.get_all_active_users()
     
     if not users:
         await update.message.reply_text("❌ No active users found in the database.")
         return
 
-    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users. This might take a moment...")
+    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users...")
     
     success_count = 0
     fail_count = 0
     
-    # Loop through every user and send the message
     for user in users:
         try:
             if reply_to_message:
-                # Setup the base copy command
                 copy_kwargs = {
                     "chat_id": user.user_id,
                     "from_chat_id": reply_to_message.chat.id,
                     "message_id": reply_to_message.message_id
                 }
                 
-                # If you typed a message after /broadcast, force it to be the new caption!
+                # If they typed text, override the caption
                 if broadcast_text:
                     copy_kwargs["caption"] = broadcast_text
                     copy_kwargs["parse_mode"] = "Markdown"
                     
+                # If we built a button, attach it to the image/video
+                if reply_markup:
+                    copy_kwargs["reply_markup"] = reply_markup
+                    
                 await context.bot.copy_message(**copy_kwargs)
                 
             else:
-                # OPTION 1: Otherwise, just send the text they typed
+                # Normal text broadcast
                 await context.bot.send_message(
                     chat_id=user.user_id, 
                     text=broadcast_text,
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
+                    reply_markup=reply_markup
                 )
                 
             success_count += 1
-            
-            # VERY IMPORTANT: Pause for 0.05 seconds to avoid Telegram rate limits
             await asyncio.sleep(0.05) 
             
         except Exception as e:
             fail_count += 1
-            # Optionally deactivate them if they blocked the bot
             await user_service.deactivate_user(user.user_id)
             
-    # Send a final report to the admin
     report = (
         f"✅ **Broadcast Complete!**\n"
         f"━━━━━━━━━━━━━━━\n"
