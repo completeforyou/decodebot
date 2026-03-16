@@ -2,7 +2,7 @@
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
-from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
+from core.config import BOT_TOKEN, DATABASE_URL,logger
 from database import init_db
 from handlers.base_handlers import (
     profile_command, start_command, handle_user_message, 
@@ -10,7 +10,8 @@ from handlers.base_handlers import (
 )
 from handlers.admin_handlers import (
     handle_channel_post, add_premium_command, handle_admin_forward, 
-    edit_tags_command, delete_file_command, edit_caption_command
+    edit_tags_command, delete_file_command, edit_caption_command,
+    list_channels_command, add_channel_command, remove_channel_command, toggle_command
 )
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
@@ -28,7 +29,7 @@ async def handle_sub_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.delete() # Cleans up the prompt
 
 def main():
-    if not BOT_TOKEN or not DATABASE_URL or not CHANNEL_IDS:
+    if not BOT_TOKEN or not DATABASE_URL:
         logger.error("CRITICAL ERROR: Missing environment variables.")
         return
 
@@ -47,16 +48,22 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel_command)]
     )
 
-    # Register Handlers
+    # User Handlers
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("checkin", checkin_command))  
     app.add_handler(CommandHandler("referral", referral_command))
     app.add_handler(CommandHandler("random", random_command))
-    app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("profile", profile_command))
+    #admin handlers
+    app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("edittags", edit_tags_command))
     app.add_handler(CommandHandler("editcaption", edit_caption_command))
     app.add_handler(CommandHandler("deletefile", delete_file_command))
+    app.add_handler(CommandHandler("channels", list_channels_command))
+    app.add_handler(CommandHandler("addchannel", add_channel_command))
+    app.add_handler(CommandHandler("rmchannel", remove_channel_command))
+    app.add_handler(CommandHandler("toggle", toggle_command))
+
     app.add_handler(MessageHandler(filters.ChatType.CHANNEL, handle_channel_post))
     app.add_handler(search_conv_handler)
     app.add_handler(CallbackQueryHandler(handle_search_callbacks, pattern="^search_"))

@@ -9,6 +9,7 @@ from core.security import admin_only
 from services import users as user_service
 from services import files as file_service
 from services import features as feature_service
+from services import channels as channel_service
 
 def generate_code(length=10):
     # Generates 'rad_' followed by 10 random letters (both upper and lowercase)
@@ -18,7 +19,11 @@ def generate_code(length=10):
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.channel_post
     
-    if not msg or msg.chat.id not in CHANNEL_IDS:
+    if not msg:
+        return
+    
+    is_approved = await channel_service.is_approved(msg.chat.id)
+    if not is_approved:
         return
         
     if not (msg.video or msg.photo or msg.document):
@@ -180,3 +185,60 @@ async def toggle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Tell the admin the result
     status_text = "✅ ENABLED" if new_status else "❌ DISABLED"
     await update.message.reply_text(f"Feature `{feature_name}` is now **{status_text}**.", parse_mode="Markdown")
+
+@admin_only
+async def list_channels_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Lists all approved channels."""
+    channels = await channel_service.get_all_channels()
+    
+    if not channels:
+        await update.message.reply_text("No approved channels have been added yet.")
+        return
+        
+    text = "📢 **Approved Channels:**\n\n"
+    for cid, name in channels.items():
+        text += f"• **{name}** (`{cid}`)\n"
+        
+    text += "\n*(Use `/addchannel` or `/rmchannel` to manage this list)*"
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+@admin_only
+async def add_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Adds a new channel."""
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Usage: `/addchannel <channel_id> <channel_name>`\nExample: `/addchannel -100123456789 Main Channel`", parse_mode="Markdown")
+        return
+        
+    try:
+        channel_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Channel ID must be a number.")
+        return
+        
+    name = " ".join(context.args[1:])
+    success = await channel_service.add_channel(channel_id, name)
+    
+    if success:
+        await update.message.reply_text(f"✅ Successfully added **{name}** (`{channel_id}`) to approved channels.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("⚠️ This channel is already in the database.")
+
+@admin_only
+async def remove_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Removes an existing channel."""
+    if not context.args:
+        await update.message.reply_text("⚠️ Usage: `/rmchannel <channel_id>`", parse_mode="Markdown")
+        return
+        
+    try:
+        channel_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Channel ID must be a number.")
+        return
+        
+    success = await channel_service.remove_channel(channel_id)
+    
+    if success:
+        await update.message.reply_text(f"✅ Successfully removed `{channel_id}` from approved channels.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("⚠️ Channel not found in the database.")

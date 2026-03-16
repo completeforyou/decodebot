@@ -8,6 +8,7 @@ from models.base import Base
 from models.user import User
 from models.file import File
 from models.feature import Feature
+from models.channel import ApprovedChannel
 
 # Configure the Async Engine with connection pooling best practices
 engine = create_async_engine(
