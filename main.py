@@ -1,5 +1,6 @@
 # main.py
 import logging
+import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 from core.config import BOT_TOKEN, DATABASE_URL, CHANNEL_IDS, logger
@@ -36,9 +37,6 @@ def main():
     Application.builder()
     .token(BOT_TOKEN)
     .post_init(post_init)
-    .connect_timeout(30.0)  # Gives the server 30 seconds to connect
-    .read_timeout(30.0)     # Gives the server 30 seconds to read the response
-    .get_updates_read_timeout(42.0) # Helps stabilize polling
     .build()
 )
 
@@ -67,8 +65,20 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
-    logger.info("Bot started via polling...")
-    app.run_polling()
+
+    PORT = int(os.environ.get('PORT', 8443))
+    WEBHOOK_URL = "https://decodebot-production.up.railway.app"
+
+    if WEBHOOK_URL:
+        logger.info(f"Starting bot via Webhook on port {PORT}...")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+        )
+    else:
+        logger.info("Bot started via polling...")
+        app.run_polling()
 
 if __name__ == '__main__':
     main()

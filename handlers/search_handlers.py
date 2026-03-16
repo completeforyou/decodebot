@@ -40,13 +40,10 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fetches random videos and uses the search pagination to display them."""
     user_id = update.effective_user.id
-    db = context.bot_data['db']
-    
-    # Ensure user is registered
-    await db.users.add_or_update_user(user_id, update.effective_user.username)
+    await user_service.add_or_update_user(user_id, update.effective_user.username)
     
     # Check credits
-    user_record = await db.users.get_user(user_id)
+    user_record = await user_service.get_user(user_id)
     if not user_record:
         await update.message.reply_text("Error loading user profile.")
         return 
@@ -63,7 +60,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 
 
     try:
-        results = await db.files.get_random_files(limit=20) # Fetches 20 random videos
+        results = await file_service.get_random_files(limit=20) # Fetches 20 random videos
     except Exception as e:
         logger.error(f"Database random fetch error: {e}")
         await update.message.reply_text("An error occurred. Please try again.")
@@ -74,16 +71,26 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 
     
     if not is_premium:
-        await db.users.use_search_credit(user_id)
+        await user_service.use_search_credit(user_id)
+
+    lightweight_results = [
+        {'code': r.code, 'channel_id': r.channel_id, 'message_id': r.message_id} 
+        for r in results
+    ]
         
     # Reuse the search state variables to magically enable your pagination!
-    context.user_data['search_results'] = results
+    context.user_data['search_results'] = lightweight_results
     context.user_data['search_index'] = 0
     context.user_data['search_keyword'] = "🎲 Random Discovery"
     
     await send_search_page(update, context)
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    context.user_data.pop('search_results', None)
+    context.user_data.pop('search_index', None)
+    context.user_data.pop('search_keyword', None)
+
     await update.message.reply_text("Search cancelled! Send me an extraction code whenever you're ready.")
     return ConversationHandler.END
 
