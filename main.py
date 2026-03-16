@@ -66,7 +66,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
 
-    PORT = int(os.environ.get('PORT', 8443))
+    PORT = int(os.environ.get('PORT', 8080))
     WEBHOOK_URL = "https://decodebot-production.up.railway.app"
 
     if WEBHOOK_URL:
@@ -74,6 +74,7 @@ def main():
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
+            url_path=BOT_TOKEN,
             webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
         )
     else:
