@@ -73,17 +73,8 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
-    if WEBHOOK_URL:
-        logger.info(f"Starting bot via Webhooks on port {PORT}...")
-        # Start the internal web server to listen for Telegram's pushes
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            webhook_url=WEBHOOK_URL
-        )
-    else:
-        logger.info("Bot started via polling (Local mode)...")
-        app.run_polling()
+    logger.info("Bot started via polling (Local mode)...")
+    app.run_polling()
     
 if __name__ == '__main__':
     main()
