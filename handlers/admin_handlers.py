@@ -258,7 +258,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "⚠️ **How to use Broadcast:**\n\n"
             "**Standard:** `/broadcast Your message`\n"
-            "**With Button:** `/broadcast Your message || Button Name | https://link.com`\n\n"
+            "**With Button:** `/broadcast Your message || Button Name | https://link.com | color`\n\n"
             "*(You can also reply to an image/video with these commands!)*"
         )
         await update.message.reply_text(help_text, parse_mode="Markdown")

@@ -99,8 +99,6 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Keep the raw text. We don't force it to lowercase because ILIKE in Postgres handles that automatically!
     keyword = update.message.text.strip()
     user_id = update.effective_user.id
-        
-    db = context.bot_data['db']
     
     try:
         # Call the new fuzzy search method
