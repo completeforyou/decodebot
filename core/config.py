@@ -13,6 +13,9 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+PORT = int(os.environ.get("PORT", 8000))
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+
 if DATABASE_URL:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
