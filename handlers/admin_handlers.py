@@ -3,6 +3,7 @@ import random
 import string
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Forbidden
 from telegram.constants import MessageOriginType
 from telegram.ext import ContextTypes
 from core.config import logger
@@ -350,9 +351,14 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             success_count += 1
             await asyncio.sleep(0.05) 
             
-        except Exception as e:
+        except Forbidden:
+            # ONLY deactivate if they actually blocked the bot
             fail_count += 1
             await user_service.deactivate_user(user.user_id)
+        except Exception as e:
+            # Just skip them for now if it's a random network error
+            logger.error(f"Failed to send broadcast to {user.user_id}: {e}")
+            fail_count += 1
             
     report = (
         f"✅ **Broadcast Complete!**\n"

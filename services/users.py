@@ -11,8 +11,8 @@ _known_users_cache = OrderedDict()
 MAX_KNOWN_USERS = 1000
 
 async def add_or_update_user(user_id: int, username: str) -> bool:
-    if user_id in _known_users_cache:
-        _known_users_cache.move_to_end(user_id) # Mark as recently used
+    if user_id in _known_users_cache and _known_users_cache[user_id] == username:
+        _known_users_cache.move_to_end(user_id)
         return False
 
     async with AsyncSessionLocal() as session:
@@ -24,19 +24,24 @@ async def add_or_update_user(user_id: int, username: str) -> bool:
                 user = User(user_id=user_id, username=username)
                 session.add(user)
                 await session.commit()
-                _update_cache(user_id)
+                _update_cache(user_id, username) # Pass username
                 return True
                 
-            _update_cache(user_id)
+            # Update username if it changed
+            if user.username != username:
+                user.username = username
+                await session.commit()
+                
+            _update_cache(user_id, username)
             return False
         except Exception as e:
             await session.rollback()
             logger.error(f"Error adding user {user_id}: {e}")
             return False
         
-def _update_cache(user_id: int):
+def _update_cache(user_id: int, username: str):
     """Helper to maintain the cache size."""
-    _known_users_cache[user_id] = True
+    _known_users_cache[user_id] = username
     if len(_known_users_cache) > MAX_KNOWN_USERS:
         _known_users_cache.popitem(last=False)
 

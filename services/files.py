@@ -37,8 +37,15 @@ async def get_random_files(limit: int = 20):
             
         return files
     
-async def insert_file(code: str, message_id: int, channel_id: int, caption: str) -> str:
+async def insert_file(code: str, message_id: int, channel_id: int, caption: str) -> str | None:
     async with AsyncSessionLocal() as session:
+        # 1. Check if this exact message already exists
+        existing = await session.execute(
+            select(File).filter_by(message_id=message_id, channel_id=channel_id)
+        )
+        if existing.scalars().first():
+            return None # Skip inserting, it's already in the DB!
+        
         new_file = File(
             code=code, 
             message_id=message_id, 
