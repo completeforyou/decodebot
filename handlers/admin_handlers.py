@@ -245,13 +245,69 @@ async def remove_channel_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         await update.message.reply_text("⚠️ Channel not found in the database.")
 
-import asyncio
-# (Make sure to keep your other imports at the top)
+# --- 1. The Background Worker ---
+async def _run_background_broadcast(bot, users, broadcast_text, reply_markup, reply_to_message, admin_chat_id):
+    """Runs in the background, sending messages in concurrent batches."""
+    success_count = 0
+    fail_count = 0
+    batch_size = 25 # Telegram's limit is ~30 per second. 25 is safe!
 
+    async def send_to_single_user(user):
+        nonlocal success_count, fail_count
+        try:
+            if reply_to_message:
+                copy_kwargs = {
+                    "chat_id": user.user_id,
+                    "from_chat_id": reply_to_message.chat.id,
+                    "message_id": reply_to_message.message_id
+                }
+                if broadcast_text:
+                    copy_kwargs["caption"] = broadcast_text
+                    copy_kwargs["parse_mode"] = "Markdown"
+                if reply_markup:
+                    copy_kwargs["reply_markup"] = reply_markup
+                    
+                await bot.copy_message(**copy_kwargs)
+            else:
+                await bot.send_message(
+                    chat_id=user.user_id, 
+                    text=broadcast_text,
+                    parse_mode="Markdown",
+                    reply_markup=reply_markup
+                )
+            success_count += 1
+        except Forbidden:
+            fail_count += 1
+            await user_service.deactivate_user(user.user_id)
+        except Exception as e:
+            logger.error(f"Failed to send broadcast to {user.user_id}: {e}")
+            fail_count += 1
+
+    # Loop through users in chunks of 25
+    for i in range(0, len(users), batch_size):
+        batch = users[i:i + batch_size]
+        
+        # asyncio.gather fires all 25 messages at the exact same time!
+        tasks = [send_to_single_user(user) for user in batch]
+        await asyncio.gather(*tasks)
+        
+        # Rest for exactly 1 second to reset Telegram's rate limit
+        await asyncio.sleep(1) 
+
+    # When totally finished, send a report back to the Admin
+    report = (
+        f"✅ **Background Broadcast Complete!**\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📨 Successfully delivered: {success_count}\n"
+        f"❌ Failed (Blocked bot): {fail_count}"
+    )
+    await bot.send_message(chat_id=admin_chat_id, text=report, parse_mode="Markdown")
+
+
+# --- 2. The Admin Command ---
 @admin_only
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Broadcasts a message (with optional inline buttons) to all active users."""
-    
+    """Initiates the broadcast and pushes it to a background task."""
     reply_to_message = update.message.reply_to_message
     raw_text = " ".join(context.args) if context.args else None
     
@@ -265,41 +321,27 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(help_text, parse_mode="Markdown")
         return
 
-    # --- BUTTON PARSING LOGIC ---
+    # --- BUTTON PARSING LOGIC (Remains exactly the same as your code) ---
     broadcast_text = raw_text
     reply_markup = None
     
-    # Check if the admin used our special "||" separator to add a button
     if raw_text and "||" in raw_text:
         parts = raw_text.split("||")
-        broadcast_text = parts[0].strip() # The actual message text
-        
+        broadcast_text = parts[0].strip() 
         button_data = parts[1].split("|")
         if len(button_data) >= 2:
             btn_text = button_data[0].strip()
             btn_url = button_data[1].strip()
-            
-            # Default to no style (App's default theme)
             btn_style = None 
             
-            # Check if a 3rd parameter (color) was provided
             if len(button_data) >= 3:
                 color_request = button_data[2].strip().lower()
-                
-                # The official Telegram Bot API 9.4 color styles!
-                if color_request in ["red", "danger"]:
-                    btn_style = "danger"
-                elif color_request in ["green", "success"]:
-                    btn_style = "success"
-                elif color_request in ["blue", "primary"]:
-                    btn_style = "primary"
+                if color_request in ["red", "danger"]: btn_style = "danger"
+                elif color_request in ["green", "success"]: btn_style = "success"
+                elif color_request in ["blue", "primary"]: btn_style = "primary"
 
             if btn_url.startswith("http"):
-                # Inject the style safely straight into the Telegram API payload
-                kwargs = {}
-                if btn_style:
-                    kwargs = {"style": btn_style}
-                    
+                kwargs = {"style": btn_style} if btn_style else {}
                 reply_markup = InlineKeyboardMarkup([
                     [InlineKeyboardButton(text=btn_text, url=btn_url, api_kwargs=kwargs)]
                 ])
@@ -314,56 +356,22 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ No active users found in the database.")
         return
 
-    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users...")
-    
-    success_count = 0
-    fail_count = 0
-    
-    for user in users:
-        try:
-            if reply_to_message:
-                copy_kwargs = {
-                    "chat_id": user.user_id,
-                    "from_chat_id": reply_to_message.chat.id,
-                    "message_id": reply_to_message.message_id
-                }
-                
-                # If they typed text, override the caption
-                if broadcast_text:
-                    copy_kwargs["caption"] = broadcast_text
-                    copy_kwargs["parse_mode"] = "Markdown"
-                    
-                # If we built a button, attach it to the image/video
-                if reply_markup:
-                    copy_kwargs["reply_markup"] = reply_markup
-                    
-                await context.bot.copy_message(**copy_kwargs)
-                
-            else:
-                # Normal text broadcast
-                await context.bot.send_message(
-                    chat_id=user.user_id, 
-                    text=broadcast_text,
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
-                
-            success_count += 1
-            await asyncio.sleep(0.05) 
-            
-        except Forbidden:
-            # ONLY deactivate if they actually blocked the bot
-            fail_count += 1
-            await user_service.deactivate_user(user.user_id)
-        except Exception as e:
-            # Just skip them for now if it's a random network error
-            logger.error(f"Failed to send broadcast to {user.user_id}: {e}")
-            fail_count += 1
-            
-    report = (
-        f"✅ **Broadcast Complete!**\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"📨 Successfully delivered: {success_count}\n"
-        f"❌ Failed (Blocked bot): {fail_count}"
+    # Tell the admin we are starting, but don't make them wait!
+    estimated_time = (len(users) // 25) + 1
+    await update.message.reply_text(
+        f"🚀 **Broadcast started in the background!**\n"
+        f"Targeting {len(users)} users. It should take about ~{estimated_time} seconds.\n"
+        f"You can continue using the bot. I will message you when it's done!"
     )
-    await update.message.reply_text(report, parse_mode="Markdown")
+    
+    # Fire off the background task
+    asyncio.create_task(
+        _run_background_broadcast(
+            bot=context.bot,
+            users=users,
+            broadcast_text=broadcast_text,
+            reply_markup=reply_markup,
+            reply_to_message=reply_to_message,
+            admin_chat_id=update.effective_chat.id
+        )
+    )
