@@ -1,5 +1,6 @@
 # main.py
 import logging
+import os
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, 
@@ -84,8 +85,25 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.FORWARDED, handle_admin_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_message))
 
-    logger.info("Bot started via polling (Local mode)...")
-    app.run_polling()
+    port = int(os.environ.get("PORT", 8080))
+    
+    if WEBHOOK_URL:
+        logger.info(f"Starting Webhook mode on port {port}...")
+        
+        # 🔒 SECURITY: Use your bot token to create a secret, unguessable path!
+        secret_path = f"webhook_{BOT_TOKEN}"
+        endpoint_url = f"{WEBHOOK_URL.rstrip('/')}/{secret_path}"
+        
+        app.run_webhook(
+            listen="0.0.0.0",        
+            port=port,               
+            url_path=secret_path,      # The server listens only on this secret path
+            webhook_url=endpoint_url   # Tells Telegram to send data to this exact secret URL
+        )
+    else:
+        # Fallback to polling if you are testing locally
+        logger.info("WEBHOOK_URL not set. Starting in Polling mode...")
+        app.run_polling()
     
 if __name__ == '__main__':
     main()
