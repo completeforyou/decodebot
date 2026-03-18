@@ -54,7 +54,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "请输入提取码以获取文件，或使用 /search 关键词 来搜索相关文件\n\n"
     )
-    await update.message.reply_text(welcome_text)
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
