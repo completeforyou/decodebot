@@ -1,10 +1,10 @@
 # handlers/base_handlers.py
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.error import Forbidden
 from services import users as user_service
 from services import files as file_service
-from core.config import logger
+from core.config import logger, ADMIN_IDS
 from core.security import require_subscription
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,11 +33,26 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logger.error(f"Failed to notify referrer {referrer_id}: {e}")
 
+    # 1. Build the default keyboard for all users
+    keyboard = [
+        [KeyboardButton("🔍 搜索"), KeyboardButton("🎲 随机")],
+        [KeyboardButton("📅 签到"), KeyboardButton("👤 个人")]
+    ]
+    
+    # 2. Add an Admin menu conditionally
+    if user and user.id in ADMIN_IDS:
+        keyboard.append([KeyboardButton("⚙️ Admin: Channels"), KeyboardButton("⚙️ Admin: Broadcast")])
+        
+    # 3. Create the markup (resize_keyboard makes it smaller and neater)
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard, 
+        resize_keyboard=True, 
+        is_persistent=True, # Keeps the keyboard open
+        input_field_placeholder="Select an option or send a code..."
+    )
+
     welcome_text = (
         "请输入提取码以获取文件，或使用 /search 关键词 来搜索相关文件\n\n"
-        "✨ **New Features:**\n"
-        "• Use /checkin to get a daily free credit!\n"
-        "• Use /referral to invite friends and earn 5 credits!"
     )
     await update.message.reply_text(welcome_text)
 

@@ -1,7 +1,10 @@
 # main.py
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler, filters, 
+    ConversationHandler, CallbackQueryHandler, ContextTypes
+    )
 from core.config import BOT_TOKEN, DATABASE_URL,logger, PORT, WEBHOOK_URL
 from database import init_db
 from handlers.base_handlers import (
@@ -42,7 +45,10 @@ def main():
 )
 
     search_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("search", search_command)],
+        entry_points=[
+            CommandHandler("search", search_command),
+            MessageHandler(filters.Regex("^🔍 Search$"), search_command) # Listens for the button
+        ],
         states={
             WAITING_FOR_KEYWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, perform_search)]
         },
@@ -55,7 +61,12 @@ def main():
     app.add_handler(CommandHandler("referral", referral_command))
     app.add_handler(CommandHandler("random", random_command))
     app.add_handler(CommandHandler("profile", profile_command))
+    app.add_handler(MessageHandler(filters.Regex("^🎲 随机$"), random_command))
+    app.add_handler(MessageHandler(filters.Regex("^📅 签到$"), checkin_command))
+    app.add_handler(MessageHandler(filters.Regex("^👤 个人$"), profile_command))
     #admin handlers
+    app.add_handler(MessageHandler(filters.Regex("^⚙️ Admin: Channels$"), list_channels_command))
+    app.add_handler(MessageHandler(filters.Regex("^⚙️ Admin: Broadcast$"), broadcast_command))
     app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("edittags", edit_tags_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
