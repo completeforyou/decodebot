@@ -47,7 +47,7 @@ def main():
     search_conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("search", search_command),
-            MessageHandler(filters.Regex("^🔍 Search$"), search_command) # Listens for the button
+            MessageHandler(filters.Regex("^🔍 搜索$"), search_command) # Listens for the button
         ],
         states={
             WAITING_FOR_KEYWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, perform_search)]

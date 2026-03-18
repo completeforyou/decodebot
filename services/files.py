@@ -20,20 +20,10 @@ async def search_by_keyword(keyword: str, limit: int = 50):
 
 async def get_random_files(limit: int = 20):
     async with AsyncSessionLocal() as session:
-        # TABLESAMPLE SYSTEM(5) takes a random 5% sample of the table pages
-        # This is incredibly fast compared to order_by(random())
-        query = select(File).with_hint(File, "TABLESAMPLE SYSTEM (5)").limit(limit)
+        query = select(File).order_by(func.random()).limit(limit)
         
-        # Note: If the table is very small, TABLESAMPLE might return empty. 
-        # In that case, we can fallback to the standard method.
         result = await session.execute(query)
         files = result.scalars().all()
-        
-        if not files:
-            # Fallback for very small databases
-            fallback_query = select(File).order_by(func.random()).limit(limit)
-            result = await session.execute(fallback_query)
-            files = result.scalars().all()
             
         return files
     
