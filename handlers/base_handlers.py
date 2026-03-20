@@ -27,7 +27,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     await context.bot.send_message(
                         chat_id=referrer_id, 
-                        text=f"🎉 **New Referral!**\nSomeone joined using your link. You've earned **5 search credits**!",
+                        text=f"🎉 新邀请！\n有人通过您的链接加入了。您获得了 5个搜索积分!",
                         parse_mode="Markdown"
                     )
                 except Exception as e:
@@ -41,14 +41,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # 2. Add an Admin menu conditionally
     if user and user.id in ADMIN_IDS:
-        keyboard.append([KeyboardButton("⚙️ Admin: Channels"), KeyboardButton("⚙️ Admin: Broadcast")])
+        keyboard.append([KeyboardButton("⚙️ 管理:频道"), KeyboardButton("⚙️ 管理:广播")])
         
     # 3. Create the markup (resize_keyboard makes it smaller and neater)
     reply_markup = ReplyKeyboardMarkup(
         keyboard, 
         resize_keyboard=True, 
         is_persistent=True, # Keeps the keyboard open
-        input_field_placeholder="Select an option or send a code..."
+        input_field_placeholder="选择一个选项或发送提取码..."
     )
 
     welcome_text = (
@@ -72,9 +72,9 @@ async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
     
     text = (
-        f"🎁 **Invite Friends & Earn Credits!**\n\n"
-        f"Share your unique referral link with friends. When they start the bot using your link for the first time, you will receive **5 free search credits**!\n\n"
-        f"🔗 Your link:\n`{referral_link}`"
+        f"🎁 邀请朋友并赚取积分！\n\n"
+        f"与朋友分享您的独特邀请链接。当他们首次使用您的链接启动机器人时，您将获得 5 个免费搜索积分！\n\n"
+        f"🔗 您的链接:\n`{referral_link}`"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -83,7 +83,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_text = update.message.text.strip()
     
     if not user_text.lower().startswith('rad_'):
-        await update.message.reply_text("Please enter a correct code.")
+        await update.message.reply_text("请输入正确的提取码.")
         return
 
     user_id = update.effective_user.id
@@ -96,8 +96,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if not user_record.is_premium and user_record.search_credits <= 0:
         await update.message.reply_text(
-            "🔒 **Out of Credits!**\n\n"
-            "You have used all your free requests. Please upgrade to Premium to continue downloading files."
+            "🔒 积分不足！\n\n"
+            "您已用完所有免费次数。请升级到 会员 以继续下载文件。"
         )
         return
 
@@ -119,7 +119,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             if not user_record.is_premium:
                 success = await user_service.use_search_credit(user_id)
                 if not success:
-                    await update.message.reply_text("Failed to deduct credit. You might be out of credits.")
+                    await update.message.reply_text("扣除积分失败。您的积分可能已用完")
                     return
         except Forbidden:
             # Specifically catch the block error
@@ -127,7 +127,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             await user_service.deactivate_user(user_id)        
         except Exception as e:
             logger.error(f"Copy message error: {e}")
-            await update.message.reply_text("Failed to send. The file might be deleted.")
+            await update.message.reply_text("发送失败。文件可能已被删除.")
     else:
         await update.message.reply_text("File not found.")
 
@@ -141,16 +141,16 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     if user_record.is_premium:
-        status_text = "🌟 **Premium Member** (Unlimited Searches & Downloads)"
+        status_text = "🌟 会员 (无限搜索和下载)"
     else:
-        status_text = f"🆓 **Basic Member** ({user_record.search_credits} free credits remaining)"
+        status_text = f"🆓 普通会员 (剩余{user_record.search_credits} 个免费积分)"
         
     profile_message = (
-        f"👤 **Your Profile**\n"
+        f"👤 个人资料\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"**ID:** `{user_id}`\n"
-        f"**Status:** {status_text}\n\n"
-        f"*(Use credits to /search or download files using codes)*"
+        f"ID: `{user_id}`\n"
+        f"状态: {status_text}\n\n"
+        f"(使用积分进行 /search 搜索或使用提取码下载文件)"
     )
     
     await update.message.reply_text(profile_message, parse_mode="Markdown")

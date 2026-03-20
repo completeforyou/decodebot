@@ -24,16 +24,16 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Block if out of credits
     if not is_premium and credits_left <= 0:
         await update.message.reply_text(
-            "🔒 **Out of Searches!**\n\n"
-            "You have used all your free searches. Please upgrade to Premium to continue searching."
+            "🔒 搜索次数已用完！\n\n"
+            "您已用完所有免费搜索次数。请升级为高级会员(Premium)以继续搜索。"
         )
         return ConversationHandler.END
 
     credit_msg = f"\n*(You have {credits_left} free searches left)*" if not is_premium else "\n*(Premium active)*"
 
     await update.message.reply_text(
-        f"Please enter a keyword to search for in the video captions.{credit_msg}\n\n"
-        "Or type /cancel to abort.",
+       f"请输入要在视频字幕中搜索的关键词。{credit_msg}\n\n"
+        "或输入 /cancel 取消。",
         parse_mode="Markdown"
     )
     return WAITING_FOR_KEYWORD
@@ -156,8 +156,8 @@ async def send_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE, i
     if nav_row:
         keyboard.append(nav_row)
         
-    keyboard.append([InlineKeyboardButton("📥 Send Video to Me", callback_data="search_send")])
-    keyboard.append([InlineKeyboardButton("❌ Close Search", callback_data="search_close")])
+    keyboard.append([InlineKeyboardButton("📥 发送视频", callback_data="search_send")])
+    keyboard.append([InlineKeyboardButton("❌ 关闭搜索", callback_data="search_close")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     

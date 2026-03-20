@@ -30,7 +30,7 @@ async def post_init(application: Application):
 
 async def handle_sub_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("Please try your command again now!", show_alert=True)
+    await query.answer("请现在重试您的命令！", show_alert=True)
     await query.message.delete() # Cleans up the prompt
 
 def main():
@@ -66,8 +66,8 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^📅 签到$"), checkin_command))
     app.add_handler(MessageHandler(filters.Regex("^👤 个人$"), profile_command))
     #admin handlers
-    app.add_handler(MessageHandler(filters.Regex("^⚙️ Admin: Channels$"), list_channels_command))
-    app.add_handler(MessageHandler(filters.Regex("^⚙️ Admin: Broadcast$"), broadcast_command))
+    app.add_handler(MessageHandler(filters.Regex("^⚙️ 管理:频道$"), list_channels_command))
+    app.add_handler(MessageHandler(filters.Regex("^⚙️ 管理:广播$"), broadcast_command))
     app.add_handler(CommandHandler("addp", add_premium_command))
     app.add_handler(CommandHandler("edittags", edit_tags_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))

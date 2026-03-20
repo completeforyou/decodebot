@@ -90,19 +90,19 @@ async def process_checkin(user_id: int):
             user = result.scalars().first()
             
             if not user:
-                return False, "User not found."
+                return False, "用户未找到。"
                 
             today = date.today()
             if user.last_checkin is None or user.last_checkin < today:
                 user.last_checkin = today
                 user.search_credits += 1
                 await session.commit()
-                return True, "Check-in successful! You earned 1 search credit."
+                return True, "签到成功！您获得了 1 个搜索积分."
             
-            return False, "You have already checked in today! Come back tomorrow."
+            return False, "您今天已经签到过了！明天再来吧。"
         except Exception as e:
             await session.rollback()
-            return False, "An error occurred during check-in."
+            return False, "签到过程中发生了错误。"
         
 async def process_referral(new_user_id: int, referrer_id: int) -> bool:
     """
