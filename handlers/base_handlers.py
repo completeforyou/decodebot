@@ -35,7 +35,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 1. Build the default keyboard for all users
     keyboard = [
-        [KeyboardButton("🔍 搜索"), KeyboardButton("🎁 邀请")], # KeyboardButton("🎲 随机")],
+        [KeyboardButton("🎁 邀请")], #[KeyboardButton("🔍 搜索"), KeyboardButton("🎁 邀请"), KeyboardButton("🎲 随机")]
         [KeyboardButton("📅 签到"), KeyboardButton("👤 个人")]
     ]
     
@@ -52,7 +52,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     welcome_text = (
-        "请输入提取码以获取文件，或使用 /search 关键词 来搜索相关文件\n\n"
+        "请输入提取码以获取文件\n\n"
     )
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 

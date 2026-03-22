@@ -20,7 +20,7 @@ from handlers.admin_handlers import (
 )
 from handlers.search_handlers import (
     search_command, cancel_command, perform_search, 
-    handle_search_callbacks, WAITING_FOR_KEYWORD, random_command
+    handle_search_callbacks, WAITING_FOR_KEYWORD, random_command, cancel_search_callback
 )
 
 async def post_init(application: Application):
@@ -51,7 +51,8 @@ def main():
             MessageHandler(filters.Regex("^🔍 搜索$"), search_command) # Listens for the button
         ],
         states={
-            WAITING_FOR_KEYWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, perform_search)]
+            WAITING_FOR_KEYWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, perform_search),
+                                  CallbackQueryHandler(cancel_search_callback, pattern="^search_cancel$")]
         },
         fallbacks=[CommandHandler("cancel", cancel_command)]
     )

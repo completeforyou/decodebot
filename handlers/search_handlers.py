@@ -25,16 +25,21 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_premium and credits_left <= 0:
         await update.message.reply_text(
             "🔒 搜索次数已用完！\n\n"
-            "您已用完所有免费搜索次数。请升级为高级会员以继续搜索。"
+            "您已用完所有免费次数。请升级为高级会员以继续搜索。"
         )
         return ConversationHandler.END
 
-    credit_msg = f"\n(您还有 {credits_left} 次免费搜索机会)" if not is_premium else "\n您已经是高级会员,享受无限搜索和解码"
+    credit_msg = f"\n(您还有 {credits_left} 次免费使用次数)" if not is_premium else "\n您已经是高级会员,享受无限搜索和解码"
+
+    reply_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton("❌ 取消搜索", callback_data="search_cancel")
+    ]])
 
     await update.message.reply_text(
        f"请输入要搜索的关键词。{credit_msg}\n\n"
-        "或输入 /cancel 取消。",
-        parse_mode="Markdown"
+        "或点击下方按钮取消",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
     )
     return WAITING_FOR_KEYWORD
 
@@ -208,3 +213,17 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
         context.user_data['search_index'] -= 1
         
     await send_search_page(update, context, is_callback=True)
+
+async def cancel_search_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理内联取消按钮的点击事件"""
+    query = update.callback_query
+    await query.answer() 
+    
+    # remove search state from user_data to effectively cancel the search session
+    context.user_data.pop('search_results', None)
+    context.user_data.pop('search_index', None)
+    context.user_data.pop('search_keyword', None)
+
+    # refresh the message to remove the inline buttons and show cancellation
+    await query.edit_message_text("搜索已取消 ✅")
+    return ConversationHandler.END
