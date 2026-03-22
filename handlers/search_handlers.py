@@ -25,11 +25,11 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_premium and credits_left <= 0:
         await update.message.reply_text(
             "🔒 搜索次数已用完！\n\n"
-            "您已用完所有免费搜索次数。请升级为高级会员(Premium)以继续搜索。"
+            "您已用完所有免费搜索次数。请升级为高级会员以继续搜索。"
         )
         return ConversationHandler.END
 
-    credit_msg = f"\n*(You have {credits_left} free searches left)*" if not is_premium else "\n*(Premium active)*"
+    credit_msg = f"\n(您还有 {credits_left} 次免费搜索机会)" if not is_premium else "\n已经是高级会员,享受无限搜索"
 
     await update.message.reply_text(
        f"请输入要在视频字幕中搜索的关键词。{credit_msg}\n\n"
@@ -55,8 +55,8 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Block if out of credits
     if not is_premium and credits_left <= 0:
         await update.message.reply_text(
-            "🔒 **Out of Searches!**\n\n"
-            "You have used all your free searches. Please upgrade to Premium to continue."
+            "🔒 搜索次数已用完！\n\n"
+            "您已用完所有免费搜索次数,请升级为高级会员以继续搜索"
         )
         return 
 
@@ -64,11 +64,11 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results = await file_service.get_random_files(limit=20) # Fetches 20 random videos
     except Exception as e:
         logger.error(f"Database random fetch error: {e}")
-        await update.message.reply_text("An error occurred. Please try again.")
+        await update.message.reply_text("发生错误，请稍后再试")
         return 
         
     if not results:
-        await update.message.reply_text("No videos available in the database yet.")
+        await update.message.reply_text("数据库中暂无可用视频")
         return 
     
     if not is_premium:
@@ -92,7 +92,7 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.pop('search_index', None)
     context.user_data.pop('search_keyword', None)
 
-    await update.message.reply_text("Search cancelled! Send me an extraction code whenever you're ready.")
+    await update.message.reply_text("搜索已取消")
     return ConversationHandler.END
 
 async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,7 +109,7 @@ async def perform_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
         
     if not results:
-        await update.message.reply_text(f"No videos found containing '{keyword}'.")
+        await update.message.reply_text(f"未找到包含 '{keyword}' 的视频")
         return ConversationHandler.END
     
     user_record = await user_service.get_user(user_id)
@@ -180,7 +180,7 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
         results = context.user_data.get('search_results', [])
         index = context.user_data.get('search_index', 0)
         if not results:
-            await query.message.reply_text("Session expired. Please start a new /search.")
+            await query.message.reply_text("搜索会话已过期。请重新开始 /search")
             return
         record = results[index]
         user_id = update.effective_user.id
@@ -199,7 +199,7 @@ async def handle_search_callbacks(update: Update, context: ContextTypes.DEFAULT_
             await query.answer("Delivery failed: Please unblock the bot.", show_alert=True)
         except Exception as e:
             logger.error(f"Copy message error: {e}")
-            await query.message.reply_text("Failed to send. The file might be deleted.")
+            await query.message.reply_text("发送视频时发生错误,视频可能已被删除")
         return
 
     if data == "search_next":

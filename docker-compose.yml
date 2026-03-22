@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: decodebot_user
+      POSTGRES_PASSWORD: super_secret_password_123
+      POSTGRES_DB: decodebot_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  bot:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    environment:
+      # Fill these in with your actual variables
+      - BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN
+      - ADMIN_IDS=YOUR_ADMIN_ID_HERE
+      - FORCE_JOIN_CHANNELS=
+      # This connects the bot to the database container above
+      - DATABASE_URL=postgresql+asyncpg://decodebot_user:super_secret_password_123@db:5432/decodebot_db
+      
+      # NOTE: If you use Webhooks, uncomment the next two lines. 
+      # If you use standard Polling, leave them commented out!
+      # - WEBHOOK_URL=https://your-domain.com
+      # - PORT=8080
+    ports:
+      - "8080:8080"
+    
+volumes:
+  pgdata:

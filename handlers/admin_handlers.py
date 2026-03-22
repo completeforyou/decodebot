@@ -66,12 +66,12 @@ async def add_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Using the new user_service
         success = await user_service.make_premium(target_user_id)
         if success:
-            await update.message.reply_text(f"✅ Success! User `{target_user_id}` has been upgraded to Premium.", parse_mode="Markdown")
+            await update.message.reply_text(f"✅ 成功 `{target_user_id}` 已被升级为高级会员.", parse_mode="Markdown")
         else:
-            await update.message.reply_text("❌ User not found. They need to start the bot first.")
+            await update.message.reply_text("❌ 用户未找到。他们需要先启动机器人。")
     except Exception as e:
         logger.error(f"Error upgrading user to premium: {e}")
-        await update.message.reply_text("❌ An error occurred while upgrading the user.")
+        await update.message.reply_text("❌ 在升级用户时发生错误。")
 
 @admin_only
 async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,7 +79,7 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     msg = update.message
     
     if not msg.forward_origin or msg.forward_origin.type != MessageOriginType.CHANNEL:
-        await msg.reply_text("⚠️ Please forward a message directly from the channel.")
+        await msg.reply_text("⚠️ 请转发来自频道的消息以获取文件信息。", parse_mode="Markdown")
         return
         
     original_chat_id = msg.forward_origin.chat.id
@@ -89,7 +89,7 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     record = await file_service.get_file_by_origin(original_message_id, original_chat_id)
     
     if not record:
-        await msg.reply_text("❌ This forwarded file is not in the database.")
+        await msg.reply_text("❌ 未找到与此消息对应的文件记录。请确保它来自已批准的频道，并且已正确插入数据库。", parse_mode="Markdown")
         return
         
     # Using attribute access (record.caption) instead of dict access (record['caption'])
@@ -102,11 +102,11 @@ async def handle_admin_forward(update: Update, context: ContextTypes.DEFAULT_TYP
     code = record.code
     
     reply_text = (
-        f"📄 **File Found!**\n"
+        f"📄 文件找到!\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"**Code:** `{code}`\n"
-        f"**Caption:** {caption_text}\n\n"
-        f"*(You can now use `/editcaption {code} <new text>` or `/deletefile {code}`)*"
+        f"代码: `{code}`\n"
+        f"标题: {caption_text}\n\n"
+        f"(You can now use `/editcaption {code} <new text>` or `/deletefile {code}`)"
     )
     
     await msg.reply_text(reply_text, parse_mode="Markdown")
