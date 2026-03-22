@@ -29,10 +29,10 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
-    credit_msg = f"\n(您还有 {credits_left} 次免费搜索机会)" if not is_premium else "\n已经是高级会员,享受无限搜索"
+    credit_msg = f"\n(您还有 {credits_left} 次免费搜索机会)" if not is_premium else "\n您已经是高级会员,享受无限搜索和解码"
 
     await update.message.reply_text(
-       f"请输入要在视频字幕中搜索的关键词。{credit_msg}\n\n"
+       f"请输入要搜索的关键词。{credit_msg}\n\n"
         "或输入 /cancel 取消。",
         parse_mode="Markdown"
     )

@@ -35,7 +35,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 1. Build the default keyboard for all users
     keyboard = [
-        [KeyboardButton("🔍 搜索")], # KeyboardButton("🎲 随机")],
+        [KeyboardButton("🔍 搜索"), KeyboardButton("🎁 邀请")], # KeyboardButton("🎲 随机")],
         [KeyboardButton("📅 签到"), KeyboardButton("👤 个人")]
     ]
     
@@ -73,7 +73,7 @@ async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text = (
         f"🎁 邀请朋友并赚取积分！\n\n"
-        f"与朋友分享您的独特邀请链接。当他们首次使用您的链接启动机器人时，您将获得 5 个免费搜索积分！\n\n"
+        f"与朋友分享您的邀请链接。当他们首次使用您的链接启动机器人时，您将获得 5 个免费积分！\n\n"
         f"🔗 您的链接:\n`{referral_link}`"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
@@ -97,7 +97,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not user_record.is_premium and user_record.search_credits <= 0:
         await update.message.reply_text(
             "🔒 积分不足！\n\n"
-            "您已用完所有免费次数。请升级到 会员 以继续下载文件。"
+            "您已用完所有免费次数。请升级到 会员 以获得无限观看，或者继续邀请朋友赚取更多积分！\n\n"
         )
         return
 
@@ -119,7 +119,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             if not user_record.is_premium:
                 success = await user_service.use_search_credit(user_id)
                 if not success:
-                    await update.message.reply_text("扣除积分失败。您的积分可能已用完")
+                    await update.message.reply_text("您的积分可能已用完")
                     return
         except Forbidden:
             # Specifically catch the block error

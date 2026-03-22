@@ -63,6 +63,7 @@ def main():
     app.add_handler(CommandHandler("random", random_command))
     app.add_handler(CommandHandler("profile", profile_command))
     app.add_handler(MessageHandler(filters.Regex("^🎲 随机$"), random_command))
+    app.add_handler(MessageHandler(filters.Regex("^🎁 邀请$"), referral_command))
     app.add_handler(MessageHandler(filters.Regex("^📅 签到$"), checkin_command))
     app.add_handler(MessageHandler(filters.Regex("^👤 个人$"), profile_command))
     #admin handlers
