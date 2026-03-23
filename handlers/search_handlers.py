@@ -87,7 +87,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Reuse the search state variables to magically enable your pagination!
     context.user_data['search_results'] = lightweight_results
     context.user_data['search_index'] = 0
-    context.user_data['search_keyword'] = "🎲 Random Discovery"
+    context.user_data['search_keyword'] = "🎲 随机视频"
     
     await send_search_page(update, context)
 
@@ -147,7 +147,6 @@ async def send_search_page(update: Update, context: ContextTypes.DEFAULT_TYPE, i
     text = (
         f"🔍 关键词 {keyword}:\n"
         f"📄 结果: {index + 1}/{total}个视频\n"
-        f"🔑 提取码: {current_record['code']}"
     )
     
     keyboard = []
