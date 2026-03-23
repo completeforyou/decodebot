@@ -1,31 +1,45 @@
 # services/files.py
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, func
 from database import AsyncSessionLocal
 from models.file import File
-from core.config import logger
+from core.config import DECODE_CHANNEL_ID
 
 async def get_file(code: str):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(File).filter_by(code=code))
+        query = select(File).filter_by(code=code)
+        
+        # RULE 1: Decode command ONLY works for the specific decode channel
+        if DECODE_CHANNEL_ID != 0:
+            query = query.filter(File.channel_id == DECODE_CHANNEL_ID)
+            
+        result = await session.execute(query)
         return result.scalars().first()
 
 async def search_by_keyword(keyword: str, limit: int = 50):
     async with AsyncSessionLocal() as session:
         search_pattern = f"%{keyword}%"
-        # Uses ILIKE for case-insensitive matching
-        result = await session.execute(
-            select(File).filter(File.caption.ilike(search_pattern)).limit(limit)
-        )
+        query = select(File).filter(File.caption.ilike(search_pattern))
+        
+        # RULE 2: Search EXCLUDES the decode channel
+        if DECODE_CHANNEL_ID != 0:
+            query = query.filter(File.channel_id != DECODE_CHANNEL_ID)
+            
+        query = query.limit(limit)
+        result = await session.execute(query)
         return result.scalars().all()
 
 async def get_random_files(limit: int = 20):
     async with AsyncSessionLocal() as session:
-        query = select(File).order_by(func.random()).limit(limit)
+        query = select(File)
+        
+        # RULE 3: Random EXCLUDES the decode channel
+        if DECODE_CHANNEL_ID != 0:
+            query = query.filter(File.channel_id != DECODE_CHANNEL_ID)
+            
+        query = query.order_by(func.random()).limit(limit)
         
         result = await session.execute(query)
-        files = result.scalars().all()
-            
-        return files
+        return result.scalars().all()
     
 async def insert_file(code: str, message_id: int, channel_id: int, caption: str) -> str | None:
     async with AsyncSessionLocal() as session:

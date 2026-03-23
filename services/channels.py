@@ -3,7 +3,6 @@ from typing import Dict, Optional
 from sqlalchemy import select
 from database import AsyncSessionLocal
 from models.channel import ApprovedChannel
-from core.config import logger
 
 # 1. We explicitly tell the linter this will eventually be a Dictionary
 _channels_cache: Optional[Dict[int, str]] = None

@@ -82,7 +82,7 @@ async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip()
     
-    if not user_text.lower().startswith('rad_'):
+    if not user_text.lower().startswith('maoxi_') or user_text.lower().startswith('rad_'):
         await update.message.reply_text("请输入正确的提取码.")
         return
 

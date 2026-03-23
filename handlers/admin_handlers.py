@@ -14,9 +14,9 @@ from services import features as feature_service
 from services import channels as channel_service
 
 def generate_code(length=10):
-    # Generates 'rad_' followed by 10 random letters (both upper and lowercase)
+    # Generates 'maoxi_' followed by 10 random letters (both upper and lowercase)
     random_letters = ''.join(random.choices(string.ascii_letters, k=length))
-    return f"rad_{random_letters}"
+    return f"maoxi_{random_letters}"
 
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.channel_post

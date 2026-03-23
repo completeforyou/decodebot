@@ -1,6 +1,6 @@
 # services/users.py
 from collections import OrderedDict
-from sqlalchemy import select, update
+from sqlalchemy import select
 from database import AsyncSessionLocal
 from models.user import User
 from datetime import date

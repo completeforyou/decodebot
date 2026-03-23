@@ -23,6 +23,7 @@ services:
       - BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN
       - ADMIN_IDS=YOUR_ADMIN_ID_HERE
       - FORCE_JOIN_CHANNELS=
+      - DECODE_CHANNEL_ID=
       # This connects the bot to the database container above
       - DATABASE_URL=postgresql+asyncpg://decodebot_user:super_secret_password_123@db:5432/decodebot_db
       

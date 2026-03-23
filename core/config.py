@@ -27,3 +27,6 @@ ADMIN_IDS = [int(x.strip()) for x in ADMIN_IDS_STR.split(",") if x.strip()]
 
 FORCE_JOIN_STR = os.environ.get("FORCE_JOIN_CHANNELS", "")
 FORCE_JOIN_CHANNELS = [x.strip() for x in FORCE_JOIN_STR.split(",") if x.strip()]
+
+DECODE_CHANNEL_ID_STR = os.environ.get("DECODE_CHANNEL_ID", "0")
+DECODE_CHANNEL_ID = int(DECODE_CHANNEL_ID_STR) if DECODE_CHANNEL_ID_STR else 0

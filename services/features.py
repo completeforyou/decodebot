@@ -2,7 +2,6 @@
 from sqlalchemy import select
 from database import AsyncSessionLocal
 from models.feature import Feature
-from core.config import logger
 
 # Optimization: A simple dictionary cache to prevent DB hits on every command
 _feature_cache = {}
