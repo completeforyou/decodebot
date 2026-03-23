@@ -35,7 +35,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 1. Build the default keyboard for all users
     keyboard = [
-        [KeyboardButton("🎁 邀请")], #[KeyboardButton("🔍 搜索"), KeyboardButton("🎁 邀请"), KeyboardButton("🎲 随机")]
+        [KeyboardButton("🎁 邀请")], [KeyboardButton("🔍 搜索"), KeyboardButton("🎲 随机")],
         [KeyboardButton("📅 签到"), KeyboardButton("👤 个人")]
     ]
     
